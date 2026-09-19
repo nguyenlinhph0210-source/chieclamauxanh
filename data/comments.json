@@ -7,7 +7,6 @@
     "userId": "reader_1789816291239_tf9va",
     "isAuthor": false,
     "isCollaborator": false,
-    "roleBadge": null,
     "avatar": "🌸",
     "text": "test típ",
     "createdAt": "2026-09-19T11:12:57.266Z",
@@ -19,20 +18,20 @@
     ],
     "replies": [
       {
+        "isAuthor": false,
         "likedBy": [
           "reader_1789816291239_tf9va"
         ],
-        "likes": 1,
-        "createdAt": "2026-09-19T11:13:11.584Z",
-        "isAuthor": false,
-        "isCollaborator": true,
-        "user": "Lâm Ly Lục",
         "roleBadge": "Cộng sự",
+        "createdAt": "2026-09-19T11:13:11.584Z",
+        "likes": 1,
         "text": "ok test",
         "avatar": "🌿",
-        "id": "rep_1789816391584_clz6i",
+        "isCollaborator": true,
+        "replyToUser": "huhu",
         "userEmail": "luclamly920@gmail.com",
-        "replyToUser": "huhu"
+        "id": "rep_1789816391584_clz6i",
+        "user": "Lâm Ly Lục"
       }
     ]
   },
@@ -56,19 +55,19 @@
     ],
     "replies": [
       {
-        "avatar": "💬",
-        "createdAt": "2026-09-19T10:48:15.741Z",
-        "isCollaborator": false,
-        "id": "rep_1789814895741_wwz1t",
-        "text": "Non",
-        "replyToUser": "Linh Nguyễn",
         "likes": 1,
-        "user": "Bạn đọc",
-        "userEmail": null,
-        "isAuthor": false,
+        "createdAt": "2026-09-19T10:48:15.741Z",
         "likedBy": [
           "reader_1789816291239_tf9va"
-        ]
+        ],
+        "avatar": "💬",
+        "id": "rep_1789814895741_wwz1t",
+        "userEmail": null,
+        "isCollaborator": false,
+        "text": "Non",
+        "user": "Bạn đọc",
+        "isAuthor": false,
+        "replyToUser": "Linh Nguyễn"
       }
     ]
   },
@@ -82,7 +81,6 @@
     "userId": null,
     "isAuthor": false,
     "isCollaborator": false,
-    "roleBadge": null,
     "avatar": "🌸",
     "text": "heluuu",
     "createdAt": "2026-09-19T10:33:52.779Z",
@@ -91,47 +89,47 @@
     "likedBy": [],
     "replies": [
       {
-        "createdAt": "2026-09-19T11:40:05.647Z",
-        "user": "Bạn đọc",
-        "text": "uk",
-        "isCollaborator": false,
-        "replyToUser": "Haja",
         "isAuthor": false,
+        "replyToUser": "Haja",
+        "isCollaborator": false,
+        "user": "Bạn đọc",
+        "likes": 0,
+        "id": "rep_1789818005647_ekddr",
         "likedBy": [],
         "userEmail": null,
-        "likes": 0,
-        "avatar": "💬",
-        "id": "rep_1789818005647_ekddr"
+        "text": "uk",
+        "createdAt": "2026-09-19T11:40:05.647Z",
+        "avatar": "💬"
       },
       {
+        "text": "oo kaf",
+        "createdAt": "2026-09-19T11:40:16.374Z",
+        "replyToId": "rep_1789818005647_ekddr",
+        "likedBy": [],
+        "roleBadge": "Độc giả",
+        "id": "rep_1789818016374_5fh5d",
         "likes": 0,
         "userEmail": null,
-        "replyToId": "rep_1789818005647_ekddr",
-        "id": "rep_1789818016374_5fh5d",
-        "likedBy": [],
+        "isCollaborator": false,
+        "avatar": "💬",
         "replyToUser": "Bạn đọc",
         "isAuthor": false,
-        "createdAt": "2026-09-19T11:40:16.374Z",
-        "text": "oo kaf",
-        "roleBadge": "Độc giả",
-        "avatar": "💬",
-        "user": "huhu",
-        "isCollaborator": false
+        "user": "huhu"
       },
       {
-        "createdAt": "2026-09-19T11:40:36.234Z",
+        "text": "oo hihi",
+        "roleBadge": "Cộng sự",
         "replyToId": "rep_1789818016374_5fh5d",
+        "createdAt": "2026-09-19T11:40:36.234Z",
+        "likes": 0,
+        "replyToUser": "huhu",
+        "avatar": "🌿",
         "isCollaborator": true,
+        "isAuthor": false,
         "likedBy": [],
         "userEmail": "luclamly920@gmail.com",
-        "isAuthor": false,
         "user": "Lâm Ly Lục",
-        "replyToUser": "huhu",
-        "likes": 0,
-        "avatar": "🌿",
-        "id": "rep_1789818036234_3azy9",
-        "roleBadge": "Cộng sự",
-        "text": "oo hihi"
+        "id": "rep_1789818036234_3azy9"
       }
     ]
   }
