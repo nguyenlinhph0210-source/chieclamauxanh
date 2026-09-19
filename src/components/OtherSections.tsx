@@ -23,6 +23,11 @@ import {
   KeyRound,
   Search,
   Copy,
+  Download,
+  HelpCircle,
+  X,
+  FileText,
+  RefreshCw,
 } from 'lucide-react';
 import { PLAYLIST } from '../data/mockData';
 import { bgmEngine, AudioTrack, TRACK_LIST } from '../utils/audioPlayer';
@@ -34,48 +39,17 @@ import {
   toggleLetterLike,
   ReaderLetter,
 } from '../lib/realtimeService';
+import {
+  savePersonalLetterCode,
+  getSavedPersonalCodes,
+  removePersonalLetterCode,
+  downloadSealCodeCard,
+  recoverCodesByEmail,
+  getMyLettersFromList,
+} from '../lib/letterVaultService';
 import { useAuth } from '../lib/authContext';
 import { RichTextRenderer } from './common/RichTextRenderer';
 import { RichTextEditor } from './common/RichTextEditor';
-
-// Helpers to store and retrieve personal secret lookup codes safely on user device
-const savePersonalLetterCode = (code: string, userId?: string) => {
-  try {
-    const storageKey = `mel_saved_letters_${userId || 'guest'}`;
-    const raw = localStorage.getItem(storageKey);
-    const existing: string[] = raw ? JSON.parse(raw) : [];
-    if (!existing.includes(code.toUpperCase())) {
-      existing.unshift(code.toUpperCase());
-      localStorage.setItem(storageKey, JSON.stringify(existing));
-    }
-  } catch (e) {
-    console.error('Failed to save code locally:', e);
-  }
-};
-
-const getSavedPersonalCodes = (userId?: string): string[] => {
-  try {
-    const list: string[] = [];
-    const keys = [`mel_saved_letters_${userId || 'guest'}`];
-    if (userId) keys.push('mel_saved_letters_guest');
-    keys.forEach((k) => {
-      const raw = localStorage.getItem(k);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          parsed.forEach((c) => {
-            if (typeof c === 'string' && !list.includes(c.toUpperCase())) {
-              list.push(c.toUpperCase());
-            }
-          });
-        }
-      }
-    });
-    return list;
-  } catch {
-    return [];
-  }
-};
 
 export const OtherSections: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'diary' | 'music' | 'faq'>('diary');
@@ -120,19 +94,14 @@ export const OtherSections: React.FC = () => {
   const [savedCodesVersion, setSavedCodesVersion] = useState(0);
   const [copiedLetterId, setCopiedLetterId] = useState<string | null>(null);
 
+  // Recovery modal state
+  const [isRecoveryModalOpen, setIsRecoveryModalOpen] = useState(false);
+  const [recoveryEmailInput, setRecoveryEmailInput] = useState('');
+  const [recoveryStatus, setRecoveryStatus] = useState<{ message: string; isSuccess: boolean; count?: number } | null>(null);
+
   // Filter letters belonging to the current user (via auth UID, email, or device-saved codes)
   const mySentLetters = useMemo(() => {
-    if (!letters || letters.length === 0) return [];
-    const localCodes = getSavedPersonalCodes(user?.uid);
-
-    return letters.filter((l) => {
-      const lUid = l.userId || l.senderUid;
-      const lEmail = l.userEmail || l.senderEmail;
-      if (user?.uid && lUid && lUid === user.uid) return true;
-      if (user?.email && lEmail && lEmail.toLowerCase() === user.email.toLowerCase()) return true;
-      if (l.secretLookupCode && localCodes.includes(l.secretLookupCode.toUpperCase())) return true;
-      return false;
-    });
+    return getMyLettersFromList(letters, user);
   }, [letters, user?.uid, user?.email, savedCodesVersion]);
 
   // Author inline reply state
@@ -265,11 +234,9 @@ export const OtherSections: React.FC = () => {
   const handleSendAuthorReply = async (letterId: string) => {
     if (!authorReplyText.trim() || isSubmittingReply) return;
     setIsSubmittingReply(true);
-    const replier = isMainAuthor
-      ? 'Mellifluous (Tác giả)'
-      : isCollaborator
-      ? (user?.displayName || 'Cộng sự BQT')
-      : 'Ban Quản Trị';
+    const replier = user?.displayName
+      ? `${user.displayName} (${user.roleTitle || user.roleBadge || (isMainAuthor ? 'Quản trị viên' : 'Cộng tác viên')})`
+      : (user?.roleTitle || user?.roleBadge || (isMainAuthor ? 'Quản trị viên' : isCollaborator ? 'Cộng tác viên' : 'Ban Quản Trị'));
 
     try {
       await replyToReaderLetter(letterId, authorReplyText.trim(), replier);
@@ -289,6 +256,44 @@ export const OtherSections: React.FC = () => {
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const handleRecoverByEmail = (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanEmail = recoveryEmailInput.trim().toLowerCase();
+    if (!cleanEmail) return;
+
+    const result = recoverCodesByEmail(letters, cleanEmail, user?.uid);
+    if (result.recoveredCount > 0) {
+      setSavedCodesVersion((v) => v + 1);
+      setRecoveryStatus({
+        isSuccess: true,
+        count: result.recoveredCount,
+        message: `Đã tìm thấy ${result.recoveredCount} bức thư và lưu thành công các mã niêm phong vào Két của thiết bị này!`,
+      });
+    } else {
+      setRecoveryStatus({
+        isSuccess: false,
+        message: 'Không tìm thấy bức thư nào gắn với địa chỉ email này. Bạn vui lòng kiểm tra lại email đã dùng lúc gửi thư nhé.',
+      });
+    }
+  };
+
+  const handleSyncAllMyLetters = () => {
+    const matched = getMyLettersFromList(letters, user);
+    let count = 0;
+    matched.forEach((l) => {
+      if (l.secretLookupCode) {
+        savePersonalLetterCode(l.secretLookupCode, user?.uid);
+        count++;
+      }
+    });
+    setSavedCodesVersion((v) => v + 1);
+    setRecoveryStatus({
+      isSuccess: true,
+      count,
+      message: `Đã đồng bộ thành công ${count} mã niêm phong thư vào Két lưu trữ trên thiết bị này!`,
+    });
   };
 
   const handleLookupPrivateLetter = (e: React.FormEvent) => {
@@ -616,6 +621,22 @@ export const OtherSections: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => {
+                              downloadSealCodeCard({
+                                code: createdSecretCode,
+                                sender: guestSender,
+                                tag: selectedTag,
+                                date: new Date().toLocaleString('vi-VN'),
+                              });
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-white dark:bg-stone-800 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-stone-700 text-[11px] font-semibold flex items-center gap-1.5 shadow-2xs hover:bg-purple-50 transition-colors cursor-pointer"
+                            title="Tải thẻ mã niêm phong (.txt) về máy để không bao giờ quên"
+                          >
+                            <Download className="w-3 h-3" />
+                            <span>Tải thẻ mã (.txt)</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
                               setLookupInputCode(createdSecretCode);
                               const elem = document.getElementById('reader-letter-lookup-box');
                               if (elem) elem.scrollIntoView({ behavior: 'smooth' });
@@ -626,6 +647,9 @@ export const OtherSections: React.FC = () => {
                             <span>Xem ngay trong hộp tra cứu</span>
                           </button>
                         </div>
+                        <p className="text-[10.5px] text-purple-800/85 dark:text-purple-300 font-sans italic pt-0.5">
+                          🛡️ Mã này đã được lưu tự động vào Két Thư Bí Mật của bạn. Bạn sẽ nhận được Thông Báo Riêng tại biểu tượng Chuông ngay khi có lời hồi đáp!
+                        </p>
                       </div>
                     )}
                   </div>
@@ -734,28 +758,46 @@ export const OtherSections: React.FC = () => {
                                 {myLetter.secretLookupCode}
                               </span>
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                navigator.clipboard.writeText(myLetter.secretLookupCode!);
-                                setCopiedLetterId(myLetter.id);
-                                setTimeout(() => setCopiedLetterId(null), 2500);
-                              }}
-                              className="text-[10px] text-purple-600 hover:text-purple-800 dark:text-purple-400 flex items-center gap-0.5 font-sans font-medium px-1.5 py-0.5 rounded hover:bg-purple-100/50 cursor-pointer"
-                              title="Sao chép mã niêm phong"
-                            >
-                              {copiedLetterId === myLetter.id ? (
-                                <>
-                                  <Check className="w-3 h-3 text-emerald-500" />
-                                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Đã chép</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Copy className="w-3 h-3" />
-                                  <span>Sao chép</span>
-                                </>
-                              )}
-                            </button>
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  downloadSealCodeCard({
+                                    code: myLetter.secretLookupCode!,
+                                    sender: myLetter.sender,
+                                    tag: myLetter.tag,
+                                    date: myLetter.time,
+                                  });
+                                }}
+                                className="text-[10px] text-purple-600 hover:text-purple-800 dark:text-purple-400 flex items-center gap-0.5 font-sans font-medium px-1.5 py-0.5 rounded hover:bg-purple-100/50 cursor-pointer"
+                                title="Tải file thẻ niêm phong (.txt) về máy"
+                              >
+                                <Download className="w-3 h-3" />
+                                <span className="hidden sm:inline">Tải thẻ</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(myLetter.secretLookupCode!);
+                                  setCopiedLetterId(myLetter.id);
+                                  setTimeout(() => setCopiedLetterId(null), 2500);
+                                }}
+                                className="text-[10px] text-purple-600 hover:text-purple-800 dark:text-purple-400 flex items-center gap-0.5 font-sans font-medium px-1.5 py-0.5 rounded hover:bg-purple-100/50 cursor-pointer"
+                                title="Sao chép mã niêm phong"
+                              >
+                                {copiedLetterId === myLetter.id ? (
+                                  <>
+                                    <Check className="w-3 h-3 text-emerald-500" />
+                                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Đã chép</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="w-3 h-3" />
+                                    <span>Sao chép</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
                           </div>
                         )}
 
@@ -805,11 +847,27 @@ export const OtherSections: React.FC = () => {
 
           {/* HỘP TRA CỨU THƯ THẦM KÍN DÀNH CHO ĐỘC GIẢ */}
           <div id="reader-letter-lookup-box" className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-purple-50/70 to-pink-50/70 dark:from-stone-800/80 dark:to-purple-950/30 border border-purple-200 dark:border-stone-700 space-y-3">
-            <div className="flex items-center gap-2">
-              <KeyRound className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-              <h4 className="text-xs sm:text-sm font-bold text-stone-800 dark:text-stone-200">
-                Tra cứu thư thầm kín của bạn
-              </h4>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <KeyRound className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                <h4 className="text-xs sm:text-sm font-bold text-stone-800 dark:text-stone-200">
+                  Tra cứu thư thầm kín của bạn
+                </h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsRecoveryModalOpen(true);
+                  setRecoveryStatus(null);
+                  if (user?.email) {
+                    setRecoveryEmailInput(user.email);
+                  }
+                }}
+                className="text-[11px] text-purple-700 dark:text-purple-300 hover:text-purple-900 dark:hover:text-purple-100 font-medium flex items-center gap-1 bg-purple-100/90 dark:bg-purple-950/70 hover:bg-purple-200 dark:hover:bg-purple-900 px-2.5 py-1 rounded-lg border border-purple-200 dark:border-purple-800 transition-colors cursor-pointer shadow-2xs"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                <span>Quên mã niêm phong? Khôi phục mã bảo mật</span>
+              </button>
             </div>
             <p className="text-[11px] text-stone-500 dark:text-stone-400">
               Nhập mã niêm phong (ví dụ: <span className="font-mono font-semibold">MEL-12345</span>) bạn đã nhận khi gửi thư riêng tư để xem phản hồi từ Mel:
@@ -1109,6 +1167,195 @@ export const OtherSections: React.FC = () => {
                   ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: KHÔI PHỤC MÃ NIÊM PHONG & BẢO MẬT TÂM THƯ */}
+      {isRecoveryModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white dark:bg-stone-900 w-full max-w-lg rounded-3xl p-6 sm:p-7 shadow-2xl border border-purple-200 dark:border-purple-800 space-y-5 max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between gap-3 border-b border-stone-100 dark:border-stone-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-2xl bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-serif text-base sm:text-lg font-bold text-stone-800 dark:text-stone-100">
+                    Khôi phục Mã Niêm Phong Bảo Mật
+                  </h3>
+                  <p className="text-xs text-stone-500 dark:text-stone-400">
+                    Bảo vệ quyền riêng tư · Chỉ riêng bạn mới thấy được thư của mình
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsRecoveryModalOpen(false);
+                  setRecoveryStatus(null);
+                }}
+                className="p-1.5 rounded-xl text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Privacy note */}
+            <div className="p-3.5 rounded-2xl bg-purple-50/80 dark:bg-purple-950/40 border border-purple-100 dark:border-purple-900/60 text-xs text-purple-900 dark:text-purple-200 space-y-1">
+              <div className="flex items-center gap-1.5 font-semibold">
+                <Lock className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                <span>Cam kết bảo mật riêng tư:</span>
+              </div>
+              <p className="text-[11.5px] leading-relaxed text-stone-600 dark:text-stone-300">
+                Tâm thư thầm kín được niêm phong nghiêm ngặt. Người khác tuyệt đối không thể đọc được nếu không có mã niêm phong hoặc tài khoản chính chủ của bạn.
+              </p>
+            </div>
+
+            {/* Section A: Logged-in user quick sync */}
+            {user && (
+              <div className="p-4 rounded-2xl bg-stone-50 dark:bg-stone-850 border border-stone-200/80 dark:border-stone-700/80 space-y-3">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-stone-800 dark:text-stone-200 flex items-center gap-1.5">
+                    <span>👤 Tài khoản hiện tại:</span>
+                    <strong className="font-sans text-purple-700 dark:text-purple-300">{user.email || user.displayName}</strong>
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 text-[10px] font-mono font-bold">
+                    {mySentLetters.length} bức thư
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={handleSyncAllMyLetters}
+                    className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Đồng bộ tất cả mã vào máy này</span>
+                  </button>
+                </div>
+
+                {mySentLetters.length > 0 && (
+                  <div className="max-h-40 overflow-y-auto space-y-1.5 pt-1 pr-1">
+                    {mySentLetters.map((l) => (
+                      <div
+                        key={l.id}
+                        className="p-2 rounded-xl bg-white dark:bg-stone-800 border border-stone-100 dark:border-stone-700 flex items-center justify-between text-xs gap-2"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono font-bold text-purple-700 dark:text-purple-300 text-[11px]">
+                              {l.secretLookupCode || 'Chưa niêm phong'}
+                            </span>
+                            <span className="text-[10px] text-stone-400">{l.tag}</span>
+                            {l.replyFromMel && (
+                              <span className="text-[10px] text-pink-600 dark:text-pink-400 font-semibold">
+                                · 🌸 Có hồi đáp
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10.5px] text-stone-500 truncate italic font-serif">
+                            "{l.content.replace(/<[^>]*>?/gm, '')}"
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          {l.secretLookupCode && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                downloadSealCodeCard({
+                                  code: l.secretLookupCode!,
+                                  sender: l.sender,
+                                  tag: l.tag,
+                                  date: l.time,
+                                });
+                              }}
+                              className="p-1 rounded-lg text-purple-600 hover:bg-purple-50 dark:hover:bg-stone-700 cursor-pointer"
+                              title="Tải thẻ mã (.txt)"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setLookedUpLetter(l);
+                              if (l.secretLookupCode) setLookupInputCode(l.secretLookupCode);
+                              setIsRecoveryModalOpen(false);
+                              const el = document.getElementById('reader-letter-lookup-box');
+                              if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }}
+                            className="px-2 py-0.5 rounded-lg bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 text-[10px] font-semibold hover:bg-purple-200 cursor-pointer"
+                          >
+                            Mở đọc
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Section B: Recover by email */}
+            <div className="p-4 rounded-2xl bg-stone-50 dark:bg-stone-850 border border-stone-200/80 dark:border-stone-700/80 space-y-2.5">
+              <label className="block text-xs font-semibold text-stone-800 dark:text-stone-200">
+                Tìm lại mã bằng Email đã dùng khi gửi thư:
+              </label>
+              <form onSubmit={handleRecoverByEmail} className="flex gap-2">
+                <input
+                  type="email"
+                  value={recoveryEmailInput}
+                  onChange={(e) => setRecoveryEmailInput(e.target.value)}
+                  placeholder="Nhập email bạn đã gửi thư..."
+                  className="flex-1 px-3 py-2 rounded-xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-xs text-stone-800 dark:text-stone-100 focus:outline-hidden focus:ring-2 focus:ring-purple-400"
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 shadow-2xs"
+                >
+                  <Search className="w-3.5 h-3.5" />
+                  <span>Tìm & Khôi phục</span>
+                </button>
+              </form>
+              <p className="text-[10.5px] text-stone-400 dark:text-stone-500 font-sans">
+                Hệ thống sẽ đối chiếu và lưu toàn bộ mã niêm phong của email này vào Két trên trình duyệt hiện tại.
+              </p>
+            </div>
+
+            {/* Status message */}
+            {recoveryStatus && (
+              <div
+                className={`p-3 rounded-2xl text-xs font-medium flex items-center gap-2 ${
+                  recoveryStatus.isSuccess
+                    ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                    : 'bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                }`}
+              >
+                {recoveryStatus.isSuccess ? (
+                  <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                ) : (
+                  <HelpCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                )}
+                <span>{recoveryStatus.message}</span>
+              </div>
+            )}
+
+            {/* Practical guidance */}
+            <div className="p-3.5 rounded-2xl bg-pink-50/60 dark:bg-stone-800/60 border border-pink-100 dark:border-stone-700 text-[11px] text-stone-600 dark:text-stone-300 space-y-1.5">
+              <span className="font-semibold text-pink-700 dark:text-pink-300 flex items-center gap-1">
+                <span>💡</span>
+                <span>Mẹo giữ mã niêm phong an toàn và tiện lợi:</span>
+              </span>
+              <ul className="list-disc pl-4 space-y-1 text-[10.5px] leading-relaxed">
+                <li>Bấm nút <strong>Tải thẻ mã (.txt)</strong> ngay khi gửi để lưu trữ file thẻ niêm phong bảo mật.</li>
+                <li>Đăng nhập tài khoản để mọi tâm thư được tự động gắn vào Két cá nhân, không sợ mất mã khi xóa lịch sử web.</li>
+                <li>Bật chuông thông báo 🔔: Khi Quản trị viên & Tác giả hồi đáp, bạn sẽ nhận được thông báo riêng và mở đọc ngay chỉ với 1 chạm!</li>
+              </ul>
+            </div>
           </div>
         </div>
       )}

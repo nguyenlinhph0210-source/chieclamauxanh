@@ -112,9 +112,8 @@ export const StoryDetailView: React.FC<StoryDetailViewProps> = ({
 
   useEffect(() => {
     if (user) {
-      if (isMainAuthor) setAuthorName('Mellifluous (Tác giả)');
-      else if (isCollaborator) setAuthorName(user.displayName || 'Cộng sự BQT');
-      else if (user.displayName) setAuthorName(user.displayName);
+      if (user.displayName) setAuthorName(user.displayName);
+      else if (user.roleTitle) setAuthorName(user.roleTitle);
       else if (user.email) setAuthorName(user.email.split('@')[0]);
     }
   }, [user, isAuthor, isMainAuthor, isCollaborator]);
@@ -235,7 +234,8 @@ export const StoryDetailView: React.FC<StoryDetailViewProps> = ({
     e.preventDefault();
     if (!newCommentText.trim() || isSubmittingComment) return;
 
-    const sender = authorName.trim() || (isMainAuthor ? 'Mellifluous (Tác giả)' : isCollaborator ? (user?.displayName || 'Cộng sự BQT') : (user?.displayName || 'Bạn đọc yêu truyện'));
+    const userRoleBadge = user?.roleBadge || user?.roleTitle || (isMainAuthor ? 'Quản trị viên' : isCollaborator ? 'Cộng tác viên' : undefined);
+    const sender = authorName.trim() || user?.displayName || (isMainAuthor ? (user?.displayName || 'Quản trị viên') : isCollaborator ? (user?.displayName || 'Cộng tác viên') : 'Bạn đọc yêu truyện');
 
     setIsSubmittingComment(true);
     try {
@@ -246,8 +246,8 @@ export const StoryDetailView: React.FC<StoryDetailViewProps> = ({
         userId: user?.uid || null,
         isAuthor: Boolean(isMainAuthor),
         isCollaborator: Boolean(isCollaborator),
-        roleBadge: isMainAuthor ? 'Tác giả' : isCollaborator ? 'Cộng sự' : undefined,
-        avatar: isMainAuthor ? '🌸' : isCollaborator ? '🌿' : (user?.photoURL || '🌸'),
+        roleBadge: userRoleBadge,
+        avatar: isMainAuthor ? (user?.photoURL || '👑') : isCollaborator ? (user?.photoURL || '🛡️') : (user?.photoURL || '🌸'),
         text: newCommentText.trim(),
         rating: userRating || null,
       });
@@ -263,19 +263,16 @@ export const StoryDetailView: React.FC<StoryDetailViewProps> = ({
     if (!replyingTarget || !replyText.trim() || isSubmittingReply) return;
     setIsSubmittingReply(true);
 
-    const sender = isMainAuthor
-      ? 'Mellifluous (Tác giả)'
-      : isCollaborator
-      ? (user?.displayName || 'Cộng sự BQT')
-      : (user?.displayName || replyUserName.trim() || authorName.trim() || 'Bạn đọc');
+    const userRoleBadge = user?.roleBadge || user?.roleTitle || (isMainAuthor ? 'Quản trị viên' : isCollaborator ? 'Cộng tác viên' : undefined);
+    const sender = authorName.trim() || replyUserName.trim() || user?.displayName || (isMainAuthor ? (user?.displayName || 'Quản trị viên') : isCollaborator ? (user?.displayName || 'Cộng tác viên') : 'Bạn đọc');
 
     const replyPayload = {
       user: sender,
       text: replyText.trim(),
-      avatar: isMainAuthor ? '🌸' : isCollaborator ? '🌿' : '💬',
+      avatar: isMainAuthor ? (user?.photoURL || '👑') : isCollaborator ? (user?.photoURL || '🛡️') : (user?.photoURL || '💬'),
       isAuthor: Boolean(isMainAuthor),
       isCollaborator: Boolean(isCollaborator),
-      ...(isMainAuthor ? { roleBadge: 'Tác giả' } : isCollaborator ? { roleBadge: 'Cộng sự' } : {}),
+      ...(userRoleBadge ? { roleBadge: userRoleBadge } : {}),
       userEmail: user?.email || null,
       ...(replyingTarget.replyToUser ? { replyToUser: replyingTarget.replyToUser } : {}),
       ...(replyingTarget.replyToId ? { replyToId: replyingTarget.replyToId } : {}),
@@ -838,11 +835,15 @@ export const StoryDetailView: React.FC<StoryDetailViewProps> = ({
               <span className={`w-2 h-2 rounded-full ${isMainAuthor ? 'bg-rose-500 animate-pulse' : isCollaborator ? 'bg-emerald-500' : 'bg-pink-500'}`} />
               <span>Đang bình luận với tư cách:</span>
               <strong className={`font-semibold ${isMainAuthor ? 'text-rose-600 dark:text-rose-400' : isCollaborator ? 'text-emerald-600 dark:text-emerald-400' : 'text-pink-600 dark:text-pink-400'}`}>
-                {isMainAuthor ? '🌸 Mellifluous (Tác giả)' : isCollaborator ? `🌿 ${user.displayName || 'Cộng sự BQT'}` : (user.displayName || user.email)}
+                {user.displayName || user.email}
               </strong>
-              {isCollaborator && (
-                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300">
-                  Cộng sự
+              {(user.roleTitle || user.roleBadge) && (
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full border ${
+                  isMainAuthor
+                    ? 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border-rose-300'
+                    : 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-300'
+                }`}>
+                  {user.roleTitle || user.roleBadge}
                 </span>
               )}
             </div>
@@ -869,7 +870,7 @@ export const StoryDetailView: React.FC<StoryDetailViewProps> = ({
               type="text"
               value={authorName}
               onChange={(e) => setAuthorName(e.target.value)}
-              placeholder={user ? (isMainAuthor ? 'Mellifluous (Tác giả)' : isCollaborator ? 'Cộng sự BQT' : 'Tên của bạn...') : 'Tên của bạn hoặc biệt hiệu (không bắt buộc)...'}
+              placeholder={user ? (user.displayName || user.roleTitle || 'Tên của bạn...') : 'Tên của bạn hoặc biệt hiệu (không bắt buộc)...'}
               className="px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-900 text-stone-800 dark:text-stone-200 text-xs sm:text-sm focus:outline-hidden focus:ring-2 focus:ring-pink-400"
             />
             <input
@@ -944,16 +945,23 @@ export const StoryDetailView: React.FC<StoryDetailViewProps> = ({
                           }`}>
                             {cmt.user}
                           </span>
-                          {isCmtMainAuthor && (
+                          {cmt.roleBadge ? (
+                            <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.2 rounded-full border shrink-0 ${
+                              isCmtMainAuthor
+                                ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/80 dark:text-rose-200 border-rose-300/60'
+                                : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/80 dark:text-emerald-200 border-emerald-300/60'
+                            }`}>
+                              {isCmtMainAuthor ? '👑' : '🛡️'} {cmt.roleBadge}
+                            </span>
+                          ) : isCmtMainAuthor ? (
                             <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.2 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/80 dark:text-rose-200 border border-rose-300/60 shrink-0">
-                              🌸 Tác giả • Mellifluous
+                              👑 Quản trị viên
                             </span>
-                          )}
-                          {isCmtCollaborator && (
+                          ) : isCmtCollaborator ? (
                             <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.2 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/80 dark:text-emerald-200 border border-emerald-300/60 shrink-0">
-                              🌿 Cộng sự • BQT
+                              🛡️ Cộng tác viên
                             </span>
-                          )}
+                          ) : null}
                         </div>
                         <span className="text-[11px] font-mono text-stone-400 shrink-0">
                           {cmt.createdAt ? new Date(cmt.createdAt).toLocaleDateString('vi-VN') : 'Mới đây'}
@@ -1123,16 +1131,23 @@ export const StoryDetailView: React.FC<StoryDetailViewProps> = ({
                                     </span>
                                   )}
 
-                                  {isRepMainAuthor && (
+                                  {rep.roleBadge ? (
+                                    <span className={`inline-flex items-center gap-0.5 text-[9px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${
+                                      isRepMainAuthor
+                                        ? 'bg-rose-200 text-rose-800 dark:bg-rose-900 dark:text-rose-200 border-rose-300'
+                                        : 'bg-emerald-200 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 border-emerald-300'
+                                    }`}>
+                                      {isRepMainAuthor ? '👑' : '🛡️'} {rep.roleBadge}
+                                    </span>
+                                  ) : isRepMainAuthor ? (
                                     <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-2 py-0.5 rounded-full bg-rose-200 text-rose-800 dark:bg-rose-900 dark:text-rose-200 border border-rose-300 shrink-0">
-                                      🌸 Tác giả • Mellifluous
+                                      👑 Quản trị viên
                                     </span>
-                                  )}
-                                  {isRepCollaborator && (
+                                  ) : isRepCollaborator ? (
                                     <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 border border-emerald-300 shrink-0">
-                                      🌿 Cộng sự • BQT
+                                      🛡️ Cộng tác viên
                                     </span>
-                                  )}
+                                  ) : null}
                                 </div>
                                 <span className="text-[10px] font-mono text-stone-400">
                                   {new Date(rep.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}

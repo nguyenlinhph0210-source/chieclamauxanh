@@ -76,7 +76,7 @@ export interface AppUser {
   isAuthor: boolean;
   isMainAuthor: boolean;
   isCollaborator: boolean;
-  role: 'author' | 'admin' | 'collaborator' | 'editor' | 'reader';
+  role: 'admin' | 'moderator' | 'collaborator' | 'author' | 'editor' | 'reader';
   roleTitle: string;
   roleBadge: string;
 }
@@ -94,7 +94,7 @@ interface AuthContextType {
   openProfileModal: () => void;
   closeProfileModal: () => void;
   collaboratorsList: CollaboratorItem[];
-  addCollaboratorByEmail: (email: string, displayName: string, role: CollaboratorItem['role'], note?: string) => Promise<void>;
+  addCollaboratorByEmail: (email: string, displayName: string, role: CollaboratorItem['role'], roleTitle?: string, note?: string) => Promise<void>;
   removeCollaborator: (collabId: string) => Promise<void>;
   updateCollaboratorRoleByAdmin: (collabId: string, role: CollaboratorItem['role'], roleTitle?: string) => Promise<void>;
   updateCollaboratorFull: (collabId: string, data: Partial<Omit<CollaboratorItem, 'id'>>) => Promise<void>;
@@ -162,23 +162,48 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     let roleTitle = 'Độc giả yêu mến';
     let roleBadge = 'Độc giả';
-    let role: 'author' | 'admin' | 'collaborator' | 'editor' | 'reader' = 'reader';
+    let role: 'admin' | 'moderator' | 'collaborator' | 'author' | 'editor' | 'reader' = 'reader';
 
-    if (isMainAuthor) {
-      roleTitle = 'Tác giả • Mellifluous';
-      roleBadge = 'Tác giả';
-      role = 'author';
-    } else if (matchedCollab) {
-      role = matchedCollab.role;
-      roleTitle = matchedCollab.roleTitle || (matchedCollab.role === 'admin' ? 'Quản trị viên' : matchedCollab.role === 'author' ? 'Đồng tác giả' : matchedCollab.role === 'editor' ? 'Biên tập viên' : 'Cộng sự BQT');
-      roleBadge = matchedCollab.role === 'admin' ? 'Quản trị' : matchedCollab.role === 'author' ? 'Tác giả' : matchedCollab.role === 'editor' ? 'Editor' : 'Cộng sự';
-    } else if (isCollaborator) {
-      roleTitle = 'Cộng sự • Ban quản trị';
-      roleBadge = 'Cộng sự';
-      role = 'collaborator';
+    if (isAuthor || isCollaborator) {
+      if (isMainAuthor) {
+        role = 'admin';
+        roleTitle = 'Quản trị viên';
+        roleBadge = 'Quản trị viên';
+      } else {
+        role = 'collaborator';
+        roleTitle = 'Cộng tác viên';
+        roleBadge = 'Cộng tác viên';
+      }
+
+      if (matchedCollab) {
+        role = matchedCollab.role;
+        const defaultTitleByRole: Record<string, string> = {
+          admin: 'Quản trị viên',
+          moderator: 'Kiểm duyệt viên',
+          collaborator: 'Cộng tác viên',
+          author: 'Quản trị viên',
+          editor: 'Kiểm duyệt viên',
+        };
+        roleTitle = matchedCollab.roleTitle || defaultTitleByRole[matchedCollab.role] || 'Cộng tác viên';
+        roleBadge = roleTitle;
+      }
+
+      // Check if user has explicit custom title in profile override
+      if (profileOverride?.roleTitle) {
+        roleTitle = profileOverride.roleTitle;
+        roleBadge = profileOverride.roleBadge || profileOverride.roleTitle;
+      }
     }
 
-    const finalDisplayName = profileOverride?.displayName || fbUser.displayName || (isMainAuthor ? 'Mellifluous (Tác giả)' : isCollaborator ? 'Cộng sự BQT' : 'Độc giả thân thương');
+    const defaultName = isMainAuthor
+      ? 'Quản trị viên'
+      : isCollaborator
+      ? (roleTitle || 'Cộng tác viên')
+      : 'Độc giả thân thương';
+    let finalDisplayName = profileOverride?.displayName || fbUser.displayName;
+    if (!finalDisplayName || finalDisplayName === 'Mellifluous (Tác giả)' || finalDisplayName === 'Cộng sự BQT') {
+      finalDisplayName = defaultName;
+    }
     const finalPhotoURL = profileOverride?.photoURL !== undefined ? profileOverride.photoURL : fbUser.photoURL || null;
 
     return {
@@ -287,9 +312,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const openProfileModal = () => setIsProfileModalOpen(true);
   const closeProfileModal = () => setIsProfileModalOpen(false);
 
-  // Update profile handler (avatar, bio, display name, etc.)
+  // Update profile handler (avatar, bio, display name, roleTitle, etc.)
   const updateUserProfileData = async (data: Partial<UserProfile>) => {
     if (!user) return;
+    const nextRoleTitle = data.roleTitle !== undefined ? data.roleTitle : user.roleTitle;
+    const nextRoleBadge = data.roleBadge !== undefined ? data.roleBadge : (data.roleTitle !== undefined ? data.roleTitle : user.roleBadge);
     const updatedProfile: UserProfile = {
       uid: user.uid,
       email: user.email,
@@ -298,8 +325,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       bio: data.bio !== undefined ? data.bio : user.bio || '',
       favoriteGenre: data.favoriteGenre !== undefined ? data.favoriteGenre : user.favoriteGenre || '',
       websiteOrSocial: data.websiteOrSocial !== undefined ? data.websiteOrSocial : user.websiteOrSocial || '',
-      role: user.role,
-      roleTitle: user.roleTitle,
+      role: data.role !== undefined ? data.role : user.role,
+      roleTitle: nextRoleTitle,
+      roleBadge: nextRoleBadge,
       updatedAt: new Date().toISOString(),
     };
 
@@ -314,7 +342,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // 2. Firestore & localStorage persistence
     await saveUserProfile(updatedProfile);
 
-    // 3. Local React state
+    // 3. If collaborator or author, sync custom role title into collaborators list so team sees it
+    if (user.isAuthor || user.isCollaborator) {
+      const userEmailLower = (user.email || '').toLowerCase().trim();
+      if (userEmailLower) {
+        const existingCollab = collaboratorsList.find((c) => c.email.toLowerCase().trim() === userEmailLower);
+        if (existingCollab) {
+          updateCollaboratorFull(existingCollab.id, {
+            roleTitle: nextRoleTitle,
+            displayName: updatedProfile.displayName,
+          }).catch(() => {});
+        }
+      }
+    }
+
+    // 4. Local React state
     const newAppUser = buildAppUser(
       {
         uid: user.uid,
@@ -336,21 +378,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     email: string,
     displayName: string,
     role: CollaboratorItem['role'],
+    roleTitle?: string,
     note?: string
   ) => {
-    const roleTitleMap: Record<CollaboratorItem['role'], string> = {
-      author: 'Đồng tác giả / Tác giả',
-      admin: 'Quản trị viên hệ thống',
-      collaborator: 'Cộng sự Ban quản trị',
-      editor: 'Biên tập viên / Editor',
+    const defaultRoleTitleMap: Record<CollaboratorItem['role'], string> = {
+      admin: 'Quản trị viên',
+      moderator: 'Kiểm duyệt viên',
+      collaborator: 'Cộng tác viên',
+      author: 'Quản trị viên',
+      editor: 'Kiểm duyệt viên',
     };
+
+    const finalRoleTitle = (roleTitle || '').trim() || defaultRoleTitleMap[role] || 'Cộng tác viên';
 
     const newCollab = await addCollaborator({
       email,
       displayName: displayName.trim() || email.split('@')[0],
       role,
-      roleTitle: roleTitleMap[role],
-      addedBy: user?.displayName || user?.email || 'Tác giả chính',
+      roleTitle: finalRoleTitle,
+      addedBy: user?.displayName || user?.email || 'Quản trị viên',
       note: note || '',
     });
 
@@ -633,15 +679,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           cleanEmail === 'mellifluous740@gmail.com' ||
           cleanEmail === 'vivi60810@gmail.com');
 
-      const role: 'author' | 'admin' | 'collaborator' | 'editor' | 'reader' = isMain
-        ? 'author'
+      const role: 'admin' | 'moderator' | 'collaborator' | 'author' | 'editor' | 'reader' = isMain
+        ? 'admin'
         : isDefaultAuthor
         ? 'collaborator'
         : 'reader';
       const roleTitle = isMain
-        ? 'Tác giả • Mellifluous'
+        ? 'Quản trị viên'
         : isDefaultAuthor
-        ? 'Cộng sự • Ban quản trị'
+        ? 'Cộng tác viên'
         : 'Độc giả yêu mến';
 
       const newAccount: StoredUserAccount = {

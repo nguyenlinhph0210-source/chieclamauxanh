@@ -140,7 +140,7 @@ export interface CollaboratorItem {
   id: string;
   email: string;
   displayName: string;
-  role: 'author' | 'admin' | 'collaborator' | 'editor';
+  role: 'admin' | 'moderator' | 'collaborator' | 'author' | 'editor';
   roleTitle?: string;
   addedBy: string;
   addedAt: string;
@@ -156,8 +156,9 @@ export interface UserProfile {
   bio?: string;
   websiteOrSocial?: string;
   favoriteGenre?: string;
-  role?: 'author' | 'admin' | 'collaborator' | 'reader';
+  role?: 'admin' | 'moderator' | 'collaborator' | 'author' | 'editor' | 'reader';
   roleTitle?: string;
+  roleBadge?: string;
   updatedAt?: string;
 }
 

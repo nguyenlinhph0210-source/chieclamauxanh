@@ -13,6 +13,7 @@ import {
   isStoryDeleted,
 } from '../data/mockData';
 import { Story, Chapter, Announcement } from '../types';
+import { getSavedPersonalCodes } from './letterVaultService';
 
 export type NotificationType = 'comment' | 'letter' | 'chapter' | 'story' | 'reply' | 'announcement' | 'letter_reply';
 
@@ -30,6 +31,7 @@ export interface AuthorNotificationItem {
   storyTitle?: string;
   chapterNumber?: number;
   user?: string;
+  secretLookupCode?: string;
   rawComment?: RealtimeComment;
   rawLetter?: ReaderLetter;
 }
@@ -188,32 +190,32 @@ const buildNotificationsList = (context: NotificationUserContext): { items: Auth
   }
 
   // =========================================================================
-  // CASE B: NORMAL LOGGED-IN READERS (Guest/Reader Privacy Protection)
-  // Strictly EXCLUDES all letters (tâm thư, thư tình cảm riêng tư).
-  // Strictly EXCLUDES general comments across other stories.
-  // ONLY INCLUDES:
-  // 1. Author/Collaborator replies to this user's comments.
-  // 2. Newly published chapters.
-  // 3. Newly published stories.
-  // 4. Official blog announcements.
+  // PERSONAL NOTIFICATIONS: FOR ALL LOGGED-IN USERS (Readers, Collaborators, Admins)
+  // Dedicated personal alerts whenever someone replies to:
+  // 1. Their personal comments or mentions in comments.
+  // 2. Their personal letters (tâm thư / thư thầm kín).
   // =========================================================================
-  if (!isInternalRole && context.user) {
+  if (context.user) {
     const userEmail = (context.user.email || '').toLowerCase().trim();
     const userName = (context.user.displayName || context.user.nickname || '').trim().toLowerCase();
     const userUid = context.user.uid || '';
+    const localSavedCodes = getSavedPersonalCodes(userUid);
 
-    // 1. Replies to this reader's comments (from author, collaborator, or other readers)
+    // 1. Replies to user's comments across stories
     currentComments.forEach((c) => {
       if (isStoryDeleted(c.storyId)) return;
       if (!storyMap.has(c.storyId)) return;
 
       const commentEmail = (c.userEmail || '').toLowerCase().trim();
       const commentUser = (c.user || '').toLowerCase().trim();
+      const commentUid = c.userId || '';
+
       const isMyComment =
+        (userUid && commentUid && userUid === commentUid) ||
         (userEmail && commentEmail && userEmail === commentEmail) ||
         (userName && commentUser && userName === commentUser);
 
-      if (isMyComment && Array.isArray(c.replies) && c.replies.length > 0) {
+      if (Array.isArray(c.replies) && c.replies.length > 0) {
         const storyTitle = storyMap.get(c.storyId) || c.storyId;
         const chLabel = c.chapterNumber ? `Chương ${c.chapterNumber}` : 'Truyện';
 
@@ -226,13 +228,19 @@ const buildNotificationsList = (context: NotificationUserContext): { items: Auth
             (userName && repName && userName === repName);
           if (isSelf) return;
 
+          // Check if this reply is to my root comment OR directly replying to me (@username)
+          const isDirectlyMentioned = rep.replyToUser && userName && rep.replyToUser.toLowerCase() === userName;
+          if (!isMyComment && !isDirectlyMentioned) return;
+
           const replyId = rep.id || `reply_${c.id}_${idx}`;
           const isAuthorRole = rep.isAuthor;
           const isCollabRole = rep.isCollaborator;
-          const roleTag = isAuthorRole
-            ? ' (Tác giả 🌸)'
+          const roleTag = rep.roleBadge
+            ? ` (${rep.roleBadge})`
+            : isAuthorRole
+            ? ' (Quản trị viên 👑)'
             : isCollabRole
-            ? ' (Cộng sự 🌿)'
+            ? ' (Cộng tác viên 🛡️)'
             : '';
           const replierDisplayName = `${rep.user || 'Bạn đọc'}${roleTag}`;
 
@@ -244,7 +252,7 @@ const buildNotificationsList = (context: NotificationUserContext): { items: Auth
             contentSnippet: cleanNotificationSnippet(rep.text).substring(0, 100) || 'Đã phản hồi bình luận của bạn',
             timeAgo: formatNotificationTime(rep.createdAt),
             createdAt: rep.createdAt || c.createdAt || new Date().toISOString(),
-            avatar: rep.avatar || (isAuthorRole ? '🌸' : '💬'),
+            avatar: rep.avatar || (isAuthorRole ? '👑' : isCollabRole ? '🛡️' : '💬'),
             isRead: readIds.has(replyId),
             storyId: c.storyId,
             storyTitle,
@@ -254,15 +262,18 @@ const buildNotificationsList = (context: NotificationUserContext): { items: Auth
       }
     });
 
-    // 2. Author/Collaborator replies to this reader's letters (Tâm thư cá nhân)
+    // 2. Author / Admin replies to user's letters (Tâm thư thầm kín / công khai)
     currentLetters.forEach((l) => {
       if (isLetterDeleted(l.id)) return;
 
       const letterEmail = (l.userEmail || l.senderEmail || '').toLowerCase().trim();
       const letterUid = l.userId || l.senderUid || '';
+      const letterCode = l.secretLookupCode?.toUpperCase();
+
       const isMyLetter =
+        (userUid && letterUid && userUid === letterUid) ||
         (userEmail && letterEmail && userEmail === letterEmail) ||
-        (userUid && letterUid && userUid === letterUid);
+        (letterCode && localSavedCodes.includes(letterCode));
 
       const hasReply = Boolean(l.replyFromMel || (l as any).authorReply);
 
@@ -271,18 +282,19 @@ const buildNotificationsList = (context: NotificationUserContext): { items: Auth
         const letterSnippet = cleanNotificationSnippet(l.content).substring(0, 35);
         const replySnippet = cleanNotificationSnippet(replyText).substring(0, 100);
         const replyId = `letter_reply_${l.id}`;
-        const replier = l.repliedBy || 'Mellifluous (Tác giả)';
+        const replier = l.repliedBy || 'Ban Quản Trị 🌸';
 
         items.push({
           id: replyId,
           type: 'letter_reply',
-          title: `${replier} 🌸`,
-          subtitle: `đã hồi đáp tâm thư của bạn: "${letterSnippet}..."`,
-          contentSnippet: replySnippet || 'Tác giả đã gửi lời nhắn hồi đáp tâm thư của bạn.',
+          title: replier,
+          subtitle: `đã hồi đáp tâm thư riêng của bạn (Mã: ${l.secretLookupCode || 'Niêm phong'}): "${letterSnippet}..."`,
+          contentSnippet: replySnippet || 'Tác giả & Ban Quản Trị đã gửi lời hồi đáp riêng cho tâm thư của bạn.',
           timeAgo: formatNotificationTime(l.repliedAt || l.createdAt),
           createdAt: l.repliedAt || l.createdAt || new Date().toISOString(),
-          avatar: '🌸',
+          avatar: '💌',
           isRead: readIds.has(replyId),
+          secretLookupCode: l.secretLookupCode,
           rawLetter: l,
         });
       }

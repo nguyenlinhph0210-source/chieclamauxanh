@@ -77,6 +77,7 @@ export const ProfileEditModal: React.FC = () => {
   const [availableGenres, setAvailableGenres] = useState<string[]>(FAVORITE_GENRE_OPTIONS);
   const [newGenreInput, setNewGenreInput] = useState('');
   const [websiteOrSocial, setWebsiteOrSocial] = useState('');
+  const [customRoleTitle, setCustomRoleTitle] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [avatarTab, setAvatarTab] = useState<'presets' | 'custom' | 'upload'>('presets');
@@ -89,6 +90,7 @@ export const ProfileEditModal: React.FC = () => {
       setPhotoURL(user.photoURL || '');
       setCustomAvatarInput(user.photoURL || '');
       setBio(user.bio || '');
+      setCustomRoleTitle(user.roleTitle || user.roleBadge || '');
 
       // Parse favorite genres (can be comma-separated)
       const userGenres = user.favoriteGenre
@@ -183,6 +185,12 @@ export const ProfileEditModal: React.FC = () => {
         bio: bio.trim(),
         favoriteGenre: selectedGenres.join(', '),
         websiteOrSocial: websiteOrSocial.trim(),
+        ...((user.isAuthor || user.isCollaborator) && customRoleTitle.trim()
+          ? {
+              roleTitle: customRoleTitle.trim(),
+              roleBadge: customRoleTitle.trim(),
+            }
+          : {}),
       });
       setSavedSuccess(true);
       setTimeout(() => {
@@ -425,6 +433,45 @@ export const ProfileEditModal: React.FC = () => {
               Tên này sẽ hiển thị ở thanh Menu, khung bình luận và hòm thư bạn đọc.
             </p>
           </div>
+
+          {/* Role Title Customization for Collaborators / Admins */}
+          {(user.isAuthor || user.isCollaborator) && (
+            <div className="space-y-2 p-3.5 rounded-2xl bg-amber-50/70 dark:bg-stone-850/80 border border-amber-200/80 dark:border-stone-700">
+              <div className="flex items-center justify-between">
+                <label
+                  htmlFor="profile-custom-role-title"
+                  className="text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 flex items-center gap-1.5"
+                >
+                  <ShieldCheck className="w-4 h-4 text-pink-500" />
+                  <span>Danh hiệu / Chức vị hiển thị</span>
+                </label>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-100 dark:bg-pink-950 text-pink-700 dark:text-pink-300 font-semibold">
+                  Ban quản trị & Cộng sự
+                </span>
+              </div>
+              <input
+                type="text"
+                id="profile-custom-role-title"
+                value={customRoleTitle}
+                onChange={(e) => setCustomRoleTitle(e.target.value)}
+                placeholder="VD: Quản trị viên, Kiểm duyệt viên, Cộng tác viên..."
+                className="w-full px-3.5 py-2 text-xs sm:text-sm rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-800 dark:text-stone-100 focus:outline-hidden focus:ring-2 focus:ring-pink-400 font-medium"
+              />
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <span className="text-[11px] text-stone-500 dark:text-stone-400">Gợi ý nhanh:</span>
+                {['Quản trị viên', 'Kiểm duyệt viên', 'Cộng tác viên'].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setCustomRoleTitle(preset)}
+                    className="px-2.5 py-0.5 rounded-lg text-[11px] bg-white dark:bg-stone-800 hover:bg-pink-100 dark:hover:bg-stone-700 border border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-300 transition-colors cursor-pointer"
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Bio Description */}
           <div className="space-y-1.5">

@@ -2021,13 +2021,15 @@ export const postCommentReply = async (
     replyToId?: string;
   }
 ): Promise<CommentReply> => {
-  const fallbackUser = reply.isAuthor
-    ? 'Mellifluous (Tác giả)'
+  const fallbackUser = reply.roleBadge
+    ? reply.roleBadge
+    : reply.isAuthor
+    ? 'Quản trị viên'
     : reply.isCollaborator
-    ? 'Cộng sự BQT'
+    ? 'Cộng tác viên'
     : 'Bạn đọc';
 
-  const defaultAvatar = reply.isAuthor ? '🌸' : reply.isCollaborator ? '🌿' : '💬';
+  const defaultAvatar = reply.isAuthor ? '👑' : reply.isCollaborator ? '🛡️' : '💬';
 
   const newReplyItem: CommentReply = {
     id: `rep_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
@@ -2040,9 +2042,9 @@ export const postCommentReply = async (
     ...(reply.roleBadge
       ? { roleBadge: reply.roleBadge }
       : reply.isAuthor
-      ? { roleBadge: 'Tác giả' }
+      ? { roleBadge: 'Quản trị viên' }
       : reply.isCollaborator
-      ? { roleBadge: 'Cộng sự' }
+      ? { roleBadge: 'Cộng tác viên' }
       : {}),
     userEmail: reply.userEmail || null,
     likes: 0,
@@ -4425,59 +4427,59 @@ export const INITIAL_COLLABORATOR_SEEDS: CollaboratorItem[] = [
   {
     id: 'collab_cuncondangiu07_gmail_com',
     email: 'cuncondangiu07@gmail.com',
-    displayName: 'Mellifluous (Tác giả chính)',
-    role: 'author',
-    roleTitle: 'Tác giả chính • Mellifluous',
+    displayName: 'Mellifluous (Quản trị viên)',
+    role: 'admin',
+    roleTitle: 'Quản trị viên',
     addedBy: 'Hệ thống sáng lập',
     addedAt: '2025-01-01T00:00:00.000Z',
-    note: 'Tác giả & Dịch giả chính',
+    note: 'Quản trị viên sáng lập',
   },
   {
     id: 'collab_meomeoxinhxinh07_gmail_com',
     email: 'meomeoxinhxinh07@gmail.com',
-    displayName: 'Mèo Con (Tác giả)',
-    role: 'author',
-    roleTitle: 'Tác giả • Mellifluous',
+    displayName: 'Mèo Con (Quản trị viên)',
+    role: 'admin',
+    roleTitle: 'Quản trị viên',
     addedBy: 'Hệ thống sáng lập',
     addedAt: '2025-01-01T00:00:00.000Z',
-    note: 'Đồng tác giả & Biên dịch',
+    note: 'Quản trị viên & Dịch giả',
   },
   {
     id: 'collab_nhatlinhpham010194_gmail_com',
     email: 'nhatlinhpham010194@gmail.com',
-    displayName: 'Nhật Linh (Admin)',
+    displayName: 'Nhật Linh (Quản trị viên)',
     role: 'admin',
-    roleTitle: 'Quản trị viên hệ thống',
+    roleTitle: 'Quản trị viên',
     addedBy: 'Hệ thống sáng lập',
     addedAt: '2025-01-01T00:00:00.000Z',
-    note: 'Kỹ thuật & Quản trị hệ thống',
+    note: 'Quản trị viên hệ thống',
   },
   {
     id: 'collab_maianhpham927_gmail_com',
     email: 'maianhpham927@gmail.com',
-    displayName: 'Mai Anh (Biên tập)',
-    role: 'editor',
-    roleTitle: 'Biên tập viên / Editor',
+    displayName: 'Mai Anh (Kiểm duyệt viên)',
+    role: 'moderator',
+    roleTitle: 'Kiểm duyệt viên',
     addedBy: 'Hệ thống sáng lập',
     addedAt: '2025-01-01T00:00:00.000Z',
-    note: 'Hiệu đính & Soát lỗi chương',
+    note: 'Kiểm duyệt & Soát lỗi chương',
   },
   {
     id: 'collab_duongtieuvi102_gmail_com',
     email: 'duongtieuvi102@gmail.com',
-    displayName: 'Tiểu Vi (Cộng sự)',
-    role: 'collaborator',
-    roleTitle: 'Cộng sự Ban quản trị',
+    displayName: 'Tiểu Vi (Kiểm duyệt viên)',
+    role: 'moderator',
+    roleTitle: 'Kiểm duyệt viên',
     addedBy: 'Hệ thống sáng lập',
     addedAt: '2025-01-01T00:00:00.000Z',
-    note: 'Hỗ trợ duyệt bài & hồi âm',
+    note: 'Kiểm duyệt & Duyệt hòm thư',
   },
   {
     id: 'collab_nguyenplinh1002_gmail_com',
     email: 'nguyenplinh1002@gmail.com',
-    displayName: 'Phương Linh (Cộng sự)',
+    displayName: 'Phương Linh (Cộng tác viên)',
     role: 'collaborator',
-    roleTitle: 'Cộng sự Ban quản trị',
+    roleTitle: 'Cộng tác viên',
     addedBy: 'Hệ thống sáng lập',
     addedAt: '2025-01-01T00:00:00.000Z',
     note: 'Cộng tác viên nội dung',
@@ -4485,19 +4487,19 @@ export const INITIAL_COLLABORATOR_SEEDS: CollaboratorItem[] = [
   {
     id: 'collab_nguyenlinhph0210_gmail_com',
     email: 'nguyenlinhph0210@gmail.com',
-    displayName: 'Linh Nguyễn (Cộng sự)',
+    displayName: 'Linh Nguyễn (Cộng tác viên)',
     role: 'collaborator',
-    roleTitle: 'Cộng sự Ban quản trị',
+    roleTitle: 'Cộng tác viên',
     addedBy: 'Hệ thống sáng lập',
     addedAt: '2025-01-01T00:00:00.000Z',
-    note: 'Hỗ trợ kiểm tra chương',
+    note: 'Cộng tác viên hỗ trợ bạn đọc',
   },
   {
     id: 'collab_luclamly920_gmail_com',
     email: 'luclamly920@gmail.com',
-    displayName: 'Lục Lam Ly (Cộng sự)',
+    displayName: 'Lục Lam Ly (Cộng tác viên)',
     role: 'collaborator',
-    roleTitle: 'Cộng sự Ban quản trị',
+    roleTitle: 'Cộng tác viên',
     addedBy: 'Hệ thống sáng lập',
     addedAt: '2025-01-01T00:00:00.000Z',
     note: 'Cộng tác viên biên tập',
@@ -4505,31 +4507,93 @@ export const INITIAL_COLLABORATOR_SEEDS: CollaboratorItem[] = [
   {
     id: 'collab_uongthienyenvi123_gmail_com',
     email: 'uongthienyenvi123@gmail.com',
-    displayName: 'Yến Vi (Cộng sự)',
+    displayName: 'Yến Vi (Cộng tác viên)',
     role: 'collaborator',
-    roleTitle: 'Cộng sự Ban quản trị',
+    roleTitle: 'Cộng tác viên',
     addedBy: 'Hệ thống sáng lập',
     addedAt: '2025-01-01T00:00:00.000Z',
-    note: 'Cộng tác viên đọc & rà soát',
+    note: 'Cộng tác viên rà soát',
   },
   {
     id: 'collab_vivi60810_gmail_com',
     email: 'vivi60810@gmail.com',
-    displayName: 'Vivi (Cộng sự)',
+    displayName: 'Vivi (Cộng tác viên)',
     role: 'collaborator',
-    roleTitle: 'Cộng sự Ban quản trị',
+    roleTitle: 'Cộng tác viên',
     addedBy: 'Hệ thống sáng lập',
     addedAt: '2025-01-01T00:00:00.000Z',
     note: 'Cộng tác viên hỗ trợ độc giả',
   },
+  {
+    id: 'collab_mellifluous740_gmail_com',
+    email: 'mellifluous740@gmail.com',
+    displayName: 'Mellifluous Admin',
+    role: 'admin',
+    roleTitle: 'Quản trị viên',
+    addedBy: 'Hệ thống sáng lập',
+    addedAt: '2025-01-01T00:00:00.000Z',
+    note: 'Quản trị viên hệ thống',
+  },
 ];
+
+/**
+ * Normalizes legacy collaborator role titles to the newly requested naming system:
+ * - Quản trị viên (admin)
+ * - Kiểm duyệt viên (moderator)
+ * - Cộng tác viên (collaborator)
+ */
+export const normalizeCollaboratorItem = (item: CollaboratorItem): CollaboratorItem => {
+  let role = item.role;
+  let roleTitle = item.roleTitle || '';
+
+  // Normalize roles if needed
+  if (role === 'author') role = 'admin';
+  if (role === 'editor') role = 'moderator';
+
+  // Upgrade legacy titles if they match the previous defaults
+  if (
+    !roleTitle ||
+    roleTitle === 'Tác giả chính • Mellifluous' ||
+    roleTitle === 'Tác giả • Mellifluous' ||
+    roleTitle === 'Đồng tác giả / Tác giả' ||
+    roleTitle === 'Quản trị viên hệ thống'
+  ) {
+    if (role === 'admin') roleTitle = 'Quản trị viên';
+  }
+
+  if (
+    roleTitle === 'Biên tập viên / Editor' ||
+    roleTitle === 'Biên tập viên' ||
+    role === 'moderator' && !roleTitle
+  ) {
+    roleTitle = 'Kiểm duyệt viên';
+  }
+
+  if (
+    roleTitle === 'Cộng sự Ban quản trị' ||
+    roleTitle === 'Cộng sự • Ban quản trị' ||
+    roleTitle === 'Cộng sự BQT' ||
+    roleTitle === 'Cộng sự' ||
+    role === 'collaborator' && !roleTitle
+  ) {
+    roleTitle = 'Cộng tác viên';
+  }
+
+  return {
+    ...item,
+    role,
+    roleTitle,
+  };
+};
 
 export const getStoredCollaborators = (): CollaboratorItem[] => {
   try {
     const raw = localStorage.getItem(LOCAL_COLLABORATORS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map(normalizeCollaboratorItem);
+      }
     }
   } catch {}
   return INITIAL_COLLABORATOR_SEEDS;
@@ -4554,7 +4618,7 @@ export const subscribeToCollaborators = (
       if (snapshot.exists()) {
         const data = snapshot.data();
         if (Array.isArray(data?.items)) {
-          list = data.items;
+          list = data.items.map(normalizeCollaboratorItem);
         }
       }
 
