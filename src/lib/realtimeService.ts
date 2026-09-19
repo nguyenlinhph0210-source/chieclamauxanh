@@ -21,6 +21,7 @@ import {
   checkAndHandleQuotaError,
   resetFirestoreQuotaExhaustion,
   setFirestoreEnabled,
+  onFirestoreQuotaReset,
 } from './firebase';
 import { GlobalRealtimeStats, StoryRealtimeStats, RealtimeComment, Story, Chapter, Announcement, ReaderLetter, CommentReply, CollaboratorItem, UserProfile } from '../types';
 export type { ReaderLetter, RealtimeComment, CommentReply, GlobalRealtimeStats, StoryRealtimeStats, CollaboratorItem, UserProfile };
@@ -111,6 +112,12 @@ export const withTimeout = <T>(promise: Promise<T>, timeoutMs = 3500): Promise<T
 let isFirestoreQuotaBlocked = false;
 let quotaBlockedUntil = 0;
 
+// Listen to Firestore quota reset event to immediately unblock and allow all services to reconnect
+onFirestoreQuotaReset(() => {
+  isFirestoreQuotaBlocked = false;
+  quotaBlockedUntil = 0;
+});
+
 export const checkIsFirestoreBlocked = (): boolean => {
   if (isFirestoreQuotaExhausted()) {
     return true;
@@ -119,7 +126,12 @@ export const checkIsFirestoreBlocked = (): boolean => {
     return true;
   }
   isFirestoreQuotaBlocked = false;
+  quotaBlockedUntil = 0;
   return false;
+};
+
+export const isFirestoreEnabled = (): boolean => {
+  return !checkIsFirestoreBlocked();
 };
 
 export const flagFirestoreQuotaExceeded = (err?: any): boolean => {
@@ -133,7 +145,7 @@ export const flagFirestoreQuotaExceeded = (err?: any): boolean => {
     isFirestoreQuotaBlocked = true;
     quotaBlockedUntil = Date.now() + 60 * 60 * 1000; // 1 hour backoff
     try {
-      localStorage.setItem('mel_firestore_quota_exhausted_until', String(Date.now() + 2 * 60 * 60 * 1000));
+      localStorage.setItem('mel_firestore_quota_exhausted_until', String(Date.now() + 60 * 60 * 1000));
     } catch {}
     return true;
   }
@@ -1214,9 +1226,10 @@ export const subscribeToGlobalStats = (
       .catch(() => {});
   }
 
-  // 3. Firestore snapshot only if explicitly enabled
+  // 3. Firestore snapshot with auto-reconnect on quota reset
   let unsubFirestore: (() => void) | null = null;
-  if (!checkIsFirestoreBlocked()) {
+  const startGlobalStatsFs = () => {
+    if (unsubFirestore || !isFirestoreEnabled() || checkIsFirestoreBlocked()) return;
     try {
       const statsDocRef = doc(db, 'site_stats', STATS_DOC_ID);
       unsubFirestore = onSnapshot(
@@ -1235,10 +1248,16 @@ export const subscribeToGlobalStats = (
         () => {}
       );
     } catch {}
-  }
+  };
+
+  startGlobalStatsFs();
+  const unsubReset = onFirestoreQuotaReset(() => {
+    startGlobalStatsFs();
+  });
 
   return () => {
     globalStatsListeners.delete(callback);
+    unsubReset();
     if (unsubFirestore) unsubFirestore();
   };
 };
@@ -1549,9 +1568,34 @@ export const subscribeToComments = (
     pollInterval = setInterval(fetchServerComments, 4000);
   }
 
-  // 4. Firestore onSnapshot if available
+  // 3b. GitHub Raw CDN fallback for worldwide readers
+  if (typeof window !== 'undefined') {
+    fetchRawGithubJson<Record<string, RealtimeComment[]>>('comments.json')
+      .then((ghMap) => {
+        if (ghMap && typeof ghMap === 'object' && ghMap[storyId]) {
+          const list = ghMap[storyId];
+          if (Array.isArray(list) && list.length > 0) {
+            const current = getStoredComments(storyId);
+            const map = new Map<string, RealtimeComment>();
+            list.forEach((c) => map.set(c.id, c));
+            current.forEach((c) => {
+              if (!map.has(c.id)) map.set(c.id, c);
+            });
+            const merged = Array.from(map.values()).sort(
+              (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
+            saveStoredComments(storyId, merged);
+            notifyCommentSubscribers(storyId, merged);
+          }
+        }
+      })
+      .catch(() => {});
+  }
+
+  // 4. Firestore onSnapshot with auto-reconnect on quota reset
   let unsubFirestore: (() => void) | null = null;
-  if (!isFirestoreQuotaExhausted()) {
+  const startFirestoreStoryComments = () => {
+    if (unsubFirestore || !isFirestoreEnabled() || checkIsFirestoreBlocked()) return;
     try {
       const commentsColl = collection(db, 'comments');
       // Query without composite index requirement, sorting locally
@@ -1631,7 +1675,12 @@ export const subscribeToComments = (
         }
       );
     } catch {}
-  }
+  };
+
+  startFirestoreStoryComments();
+  const unsubReset = onFirestoreQuotaReset(() => {
+    startFirestoreStoryComments();
+  });
 
   return () => {
     if (pollInterval) {
@@ -1642,6 +1691,7 @@ export const subscribeToComments = (
       set.delete(subObj);
       if (set.size === 0) activeCommentSubscribers.delete(storyId);
     }
+    unsubReset();
     if (unsubFirestore) {
       try { unsubFirestore(); } catch {}
     }
@@ -1691,9 +1741,47 @@ export const subscribeToAllComments = (
       .catch(() => {});
   }
 
-  // 3. Subscribe to Firestore realtime stream for latest comments
+  // 2b. Fetch from GitHub Raw CDN for multi-device static fallback
+  if (typeof window !== 'undefined') {
+    fetchRawGithubJson<Record<string, RealtimeComment[]> | RealtimeComment[]>('comments.json')
+      .then((ghData) => {
+        if (ghData) {
+          const byStory = new Map<string, RealtimeComment[]>();
+          if (Array.isArray(ghData)) {
+            ghData.forEach((c) => {
+              if (c && c.storyId) {
+                if (!byStory.has(c.storyId)) byStory.set(c.storyId, []);
+                byStory.get(c.storyId)!.push(c);
+              }
+            });
+          } else if (typeof ghData === 'object') {
+            Object.entries(ghData).forEach(([sId, list]) => {
+              if (Array.isArray(list)) {
+                byStory.set(sId, list);
+              }
+            });
+          }
+          byStory.forEach((list, sId) => {
+            const cur = getStoredComments(sId);
+            const map = new Map<string, RealtimeComment>();
+            list.forEach((c) => map.set(c.id, c));
+            cur.forEach((c) => {
+              if (!map.has(c.id)) map.set(c.id, c);
+            });
+            saveStoredComments(sId, Array.from(map.values()));
+          });
+          const updated = getAllStoredComments();
+          callback(updated);
+          notifyAllCommentsSubscribers(updated);
+        }
+      })
+      .catch(() => {});
+  }
+
+  // 3. Subscribe to Firestore realtime stream with auto-reconnect on quota reset
   let unsubFirestore: (() => void) | null = null;
-  if (!isFirestoreQuotaExhausted()) {
+  const startFirestoreAllComments = () => {
+    if (unsubFirestore || !isFirestoreEnabled() || checkIsFirestoreBlocked()) return;
     try {
       const coll = collection(db, 'comments');
       const q = query(coll, orderBy('createdAt', 'desc'), limit(150));
@@ -1772,14 +1860,37 @@ export const subscribeToAllComments = (
         }
       );
     } catch {}
-  }
+  };
+
+  startFirestoreAllComments();
+  const unsubReset = onFirestoreQuotaReset(() => {
+    startFirestoreAllComments();
+  });
 
   return () => {
     activeAllCommentSubscribers.delete(callback);
+    unsubReset();
     if (unsubFirestore) {
       try { unsubFirestore(); } catch {}
     }
   };
+};
+
+/**
+ * Helper to build full comments data record for GitHub auto-sync
+ */
+export const getCommentsDataRecord = (): Record<string, RealtimeComment[]> => {
+  const result: Record<string, RealtimeComment[]> = {};
+  if (typeof window !== 'undefined') {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('mel_comments_')) {
+        const sId = key.replace('mel_comments_', '');
+        result[sId] = getStoredComments(sId);
+      }
+    }
+  }
+  return result;
 };
 
 /**
@@ -1883,6 +1994,12 @@ export const postRealtimeComment = async (comment: {
     } catch (err) {
       checkAndHandleQuotaError(err);
     }
+  }
+
+  // 4. GitHub direct commit if configured
+  const ghConfig = getGithubConfig();
+  if (ghConfig.token && ghConfig.autoSync) {
+    commitGithubDataFile('comments.json', getCommentsDataRecord(), `Thêm bình luận mới ID: ${newId} [skip ci]`).catch(() => {});
   }
 };
 
@@ -1995,6 +2112,12 @@ export const postCommentReply = async (
     } catch (err) {
       checkAndHandleQuotaError(err);
     }
+  }
+
+  // 4. GitHub direct commit if configured
+  const ghConfig = getGithubConfig();
+  if (ghConfig.token && ghConfig.autoSync) {
+    commitGithubDataFile('comments.json', getCommentsDataRecord(), `Phản hồi bình luận ID: ${commentId} [skip ci]`).catch(() => {});
   }
 
   return newReplyItem;
@@ -2208,6 +2331,12 @@ export const deleteComment = async (commentId: string): Promise<void> => {
       checkAndHandleQuotaError(err);
     }
   }
+
+  // 4. GitHub direct commit if configured
+  const ghConfig = getGithubConfig();
+  if (ghConfig.token && ghConfig.autoSync) {
+    commitGithubDataFile('comments.json', getCommentsDataRecord(), `Xóa bình luận ID: ${commentId} [skip ci]`).catch(() => {});
+  }
 };
 
 /* ========================================================================
@@ -2270,9 +2399,48 @@ export const subscribeToReaderLetters = (
       });
   }
 
-  // 4. Connect to Firestore realtime stream if not quota exhausted
+  // 3b. Worldwide GitHub Raw fallback (renders letters everywhere without waiting for Firestore)
+  if (typeof window !== 'undefined') {
+    fetchRawGithubJson<string[]>('deleted_letters.json')
+      .then((ghDeleted) => {
+        if (Array.isArray(ghDeleted)) {
+          ghDeleted.forEach((id: string) => recordLetterDeleted(id));
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        fetchRawGithubJson<ReaderLetter[]>('letters.json')
+          .then((ghLetters) => {
+            if (Array.isArray(ghLetters) && ghLetters.length > 0) {
+              const current = getStoredReaderLetters();
+              const letterMap = new Map<string, ReaderLetter>();
+              ghLetters.forEach((l: ReaderLetter) => {
+                if (l && l.id && !isLetterDeleted(l.id) && !(l as any).deleted) {
+                  letterMap.set(l.id, l);
+                }
+              });
+              current.forEach((l) => {
+                if (!letterMap.has(l.id) && !isLetterDeleted(l.id)) {
+                  letterMap.set(l.id, l);
+                }
+              });
+              const merged = Array.from(letterMap.values())
+                .filter((l) => !isLetterDeleted(l.id))
+                .sort(
+                  (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                );
+              saveStoredReaderLetters(merged);
+              notifyReaderLetterSubscribers(merged);
+            }
+          })
+          .catch(() => {});
+      });
+  }
+
+  // 4. Connect to Firestore realtime stream with auto-reconnect when quota resets
   let unsubscribeFs: (() => void) | null = null;
-  if (!isFirestoreQuotaExhausted()) {
+  const startFirestoreLettersSync = () => {
+    if (unsubscribeFs || !isFirestoreEnabled() || checkIsFirestoreBlocked()) return;
     try {
       const lettersColl = collection(db, 'reader_letters');
       const q = query(lettersColl, orderBy('createdAt', 'desc'), limit(100));
@@ -2340,10 +2508,16 @@ export const subscribeToReaderLetters = (
         }
       );
     } catch {}
-  }
+  };
+
+  startFirestoreLettersSync();
+  const unsubQuotaReset = onFirestoreQuotaReset(() => {
+    startFirestoreLettersSync();
+  });
 
   return () => {
     activeReaderLetterSubscribers.delete(callback);
+    unsubQuotaReset();
     if (unsubscribeFs) {
       try { unsubscribeFs(); } catch {}
     }
@@ -2434,6 +2608,12 @@ export const sendReaderLetter = async (letter: {
     }
   }
 
+  // 5. Direct GitHub commit if configured
+  const ghConfig = getGithubConfig();
+  if (ghConfig.token && ghConfig.autoSync) {
+    commitGithubDataFile('letters.json', updatedLetters, `Thêm thư độc giả mới ID: ${newId} [skip ci]`).catch(() => {});
+  }
+
   return { id: newId, secretLookupCode };
 };
 
@@ -2469,6 +2649,12 @@ export const replyToReaderLetter = async (
     }).catch((apiErr) => {
       console.warn('Server letter reply warning:', apiErr);
     });
+  }
+
+  // GitHub sync if configured
+  const ghConfig = getGithubConfig();
+  if (ghConfig.token && ghConfig.autoSync) {
+    commitGithubDataFile('letters.json', updated, `Phản hồi thư độc giả ID: ${letterId} [skip ci]`).catch(() => {});
   }
 
   if (!isFirestoreQuotaExhausted()) {
@@ -2509,7 +2695,14 @@ export const deleteReaderLetter = async (letterId: string): Promise<void> => {
     });
   }
 
-  // 4. Firestore sync: delete doc & set soft-delete tombstone
+  // 4. GitHub direct commit if configured
+  const ghConfig = getGithubConfig();
+  if (ghConfig.token && ghConfig.autoSync) {
+    commitGithubDataFile('letters.json', updated, `Xóa thư độc giả ID: ${letterId} [skip ci]`).catch(() => {});
+    commitGithubDataFile('deleted_letters.json', Array.from(getDeletedLetterIds()), `Cập nhật danh sách thư đã xóa [skip ci]`).catch(() => {});
+  }
+
+  // 5. Firestore sync: delete doc & set soft-delete tombstone
   if (!isFirestoreQuotaExhausted()) {
     try {
       const letterRef = doc(db, 'reader_letters', letterId);
@@ -3264,6 +3457,14 @@ export const deleteStory = async (storyId: string): Promise<void> => {
         console.warn('[GitHubSync] Story delete commit note:', err);
       })
     );
+    const fullChaptersCache = { ...getLiveChaptersRuntimeCache() };
+    delete fullChaptersCache[storyId];
+    if (aliasId) delete fullChaptersCache[aliasId];
+    delTasks.push(
+      commitGithubDataFile('chapters.json', fullChaptersCache, `Dọn dẹp chương của tác phẩm đã xóa ID: ${storyId} [skip ci]`).catch((err) => {
+        console.warn('[GitHubSync] Chapters cleanup note:', err);
+      })
+    );
   }
 
   await Promise.allSettled(delTasks);
@@ -3327,9 +3528,10 @@ export const subscribeToAllChapters = (
     pollChaptersInterval = setInterval(syncRemoteChapters, 35000);
   }
 
-  // 3. Listen to Firestore collection 'chapter_stats' if quota is healthy
+  // 3. Listen to Firestore collection 'chapter_stats' with auto-reconnect on quota reset
   let unsubFirestore: (() => void) | null = null;
-  if (!checkIsFirestoreBlocked()) {
+  const startFirestoreAllChapters = () => {
+    if (unsubFirestore || !isFirestoreEnabled() || checkIsFirestoreBlocked()) return;
     try {
       const chaptersColl = collection(db, 'chapter_stats');
       unsubFirestore = onSnapshot(
@@ -3419,10 +3621,16 @@ export const subscribeToAllChapters = (
       flagFirestoreQuotaExceeded(e);
       console.warn('Firestore chapter_stats subscription error:', e);
     }
-  }
+  };
+
+  startFirestoreAllChapters();
+  const unsubReset = onFirestoreQuotaReset(() => {
+    startFirestoreAllChapters();
+  });
 
   return () => {
     activeAllChaptersSubscribers.delete(callback);
+    unsubReset();
     if (pollChaptersInterval) clearInterval(pollChaptersInterval);
     if (unsubFirestore) unsubFirestore();
   };
@@ -3494,9 +3702,10 @@ export const subscribeToStoryChapters = (
       .catch(() => {});
   }
 
-  // 4. Connect to Firestore query on chapter_stats if quota is healthy
+  // 4. Connect to Firestore query on chapter_stats with auto-reconnect on quota reset
   let unsubFirestore: (() => void) | null = null;
-  if (!checkIsFirestoreBlocked()) {
+  const startFirestoreStoryChapters = () => {
+    if (unsubFirestore || !isFirestoreEnabled() || checkIsFirestoreBlocked()) return;
     try {
       const chaptersColl = collection(db, 'chapter_stats');
       const queryIds = [storyId];
@@ -3570,11 +3779,17 @@ export const subscribeToStoryChapters = (
       flagFirestoreQuotaExceeded(e);
       console.warn('Firestore chapter_stats subscription error:', e);
     }
-  }
+  };
+
+  startFirestoreStoryChapters();
+  const unsubReset = onFirestoreQuotaReset(() => {
+    startFirestoreStoryChapters();
+  });
 
   return () => {
     activeChapterSubscribers.get(storyId)?.delete(callback);
     if (aliasId) activeChapterSubscribers.get(aliasId)?.delete(callback);
+    unsubReset();
     if (unsubFirestore) unsubFirestore();
   };
 };
@@ -3926,9 +4141,10 @@ export const subscribeToAnnouncements = (
     pollAnnInterval = setInterval(syncAnnouncements, 60000);
   }
 
-  // 4. Connect to Firestore only if quota is healthy
+  // 4. Connect to Firestore only if quota is healthy with auto-reconnect on quota reset
   let unsubFirestore: (() => void) | null = null;
-  if (!checkIsFirestoreBlocked()) {
+  const startFirestoreAnnouncements = () => {
+    if (unsubFirestore || !isFirestoreEnabled() || checkIsFirestoreBlocked()) return;
     try {
       const coll = collection(db, 'announcements');
       const q = query(coll, limit(50));
@@ -3959,10 +4175,16 @@ export const subscribeToAnnouncements = (
       flagFirestoreQuotaExceeded(e);
       console.warn('Firestore announcement subscription error:', e);
     }
-  }
+  };
+
+  startFirestoreAnnouncements();
+  const unsubReset = onFirestoreQuotaReset(() => {
+    startFirestoreAnnouncements();
+  });
 
   return () => {
     activeAnnouncementSubscribers.delete(callback);
+    unsubReset();
     if (pollAnnInterval) clearInterval(pollAnnInterval);
     if (unsubFirestore) unsubFirestore();
   };

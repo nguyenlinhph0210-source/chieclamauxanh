@@ -117,29 +117,66 @@ export const setFirestoreEnabled = (enabled: boolean) => {
 let localQuotaExhausted = false;
 let quotaNoticeLogged = false;
 
+const quotaResetListeners = new Set<() => void>();
+
+export const onFirestoreQuotaReset = (listener: () => void): (() => void) => {
+  quotaResetListeners.add(listener);
+  return () => {
+    quotaResetListeners.delete(listener);
+  };
+};
+
+export const notifyQuotaReset = () => {
+  quotaResetListeners.forEach((fn) => {
+    try {
+      fn();
+    } catch (err) {
+      console.warn('[Firestore] Error in quota reset listener:', err);
+    }
+  });
+};
+
 export const resetFirestoreQuotaExhaustion = () => {
   localQuotaExhausted = false;
+  quotaNoticeLogged = false;
   try {
     localStorage.removeItem('mel_firestore_quota_exhausted_until');
   } catch {}
+  notifyQuotaReset();
 };
 
 export const isFirestoreQuotaExhausted = (): boolean => {
   if (!isFirestoreEnabled()) return true;
-  if (localQuotaExhausted) return true;
   try {
     const rawUntil = localStorage.getItem('mel_firestore_quota_exhausted_until');
     if (rawUntil) {
       const until = Number(rawUntil);
       if (!isNaN(until) && Date.now() < until) {
+        localQuotaExhausted = true;
         return true;
       } else {
         localStorage.removeItem('mel_firestore_quota_exhausted_until');
+        if (localQuotaExhausted) {
+          localQuotaExhausted = false;
+          notifyQuotaReset();
+        }
       }
+    } else if (localQuotaExhausted) {
+      localQuotaExhausted = false;
+      notifyQuotaReset();
     }
   } catch {}
-  return false;
+  return localQuotaExhausted;
 };
+
+// Periodic background check to automatically unblock Firestore as soon as cooldown timer expires
+if (typeof window !== 'undefined') {
+  setInterval(() => {
+    if (localQuotaExhausted) {
+      isFirestoreQuotaExhausted();
+    }
+  }, 15000);
+}
 
 export const markFirestoreQuotaExhausted = () => {
   localQuotaExhausted = true;
@@ -173,7 +210,7 @@ export const checkAndHandleQuotaError = (err: any): boolean => {
     } catch {}
     if (!quotaNoticeLogged) {
       quotaNoticeLogged = true;
-      console.info('[Firestore] Giới hạn đọc/ghi miễn phí trong ngày của Firestore (Spark 50k reads / 20k writes/ngày) đã đạt mức tối đa. Blog tự động vận hành an toàn qua LocalStorage & Server API.');
+      console.info('[Firestore] Giới hạn đọc/ghi miễn phí trong ngày của Firestore (Spark 50k reads / 20k writes/ngày) đã đạt mức tối đa. Blog tự động vận hành an toàn qua LocalStorage, Server API & GitHub Repo.');
     }
     return true;
   }
@@ -337,36 +374,79 @@ export const writeBatch = (firestore: Firestore) => {
   };
 };
 
-// Safe onSnapshot wrapper: guards error handlers against unhandled exceptions
+// Safe, self-healing onSnapshot wrapper:
+// If quota is exhausted or errors out, it pauses silently. As soon as quota resets (timer or manual),
+// it automatically re-attaches and emits the fresh Firestore dataset!
 export const onSnapshot = (
   reference: any,
   observerOrNext: any,
   onError?: (error: any) => void
 ) => {
-  if (isFirestoreQuotaExhausted()) {
-    return () => {};
-  }
+  let innerUnsub: (() => void) | null = null;
+  let isCancelled = false;
+
   const safeOnError = (err: any) => {
     checkAndHandleQuotaError(err);
     if (onError) {
-      onError(err);
+      try {
+        onError(err);
+      } catch (handlerErr) {
+        console.warn('Firestore snapshot error in user callback:', handlerErr);
+      }
     } else {
-      console.warn('Firestore snapshot error (handled):', err?.message || err);
+      console.warn('Firestore snapshot notice (handled):', err?.message || err);
+    }
+    if (innerUnsub) {
+      try { innerUnsub(); } catch {}
+      innerUnsub = null;
     }
   };
 
-  if (typeof observerOrNext === 'function') {
-    return rawOnSnapshot(reference, observerOrNext, safeOnError);
-  } else if (observerOrNext && typeof observerOrNext === 'object') {
-    const origError = observerOrNext.error;
-    observerOrNext.error = (err: any) => {
-      checkAndHandleQuotaError(err);
-      if (origError) origError(err);
-      else console.warn('Firestore snapshot error (handled):', err?.message || err);
-    };
-    return rawOnSnapshot(reference, observerOrNext);
-  }
-  return rawOnSnapshot(reference, observerOrNext, safeOnError);
+  const trySubscribe = () => {
+    if (isCancelled || innerUnsub) return;
+    if (isFirestoreQuotaExhausted()) return;
+
+    try {
+      if (typeof observerOrNext === 'function') {
+        innerUnsub = rawOnSnapshot(reference, observerOrNext, safeOnError);
+      } else if (observerOrNext && typeof observerOrNext === 'object') {
+        const origError = observerOrNext.error;
+        const wrappedObserver = {
+          ...observerOrNext,
+          error: (err: any) => {
+            safeOnError(err);
+            if (origError) origError(err);
+          },
+        };
+        innerUnsub = rawOnSnapshot(reference, wrappedObserver);
+      } else {
+        innerUnsub = rawOnSnapshot(reference, observerOrNext, safeOnError);
+      }
+    } catch (err) {
+      safeOnError(err);
+    }
+  };
+
+  // 1. Initial subscription attempt
+  trySubscribe();
+
+  // 2. Automatically re-subscribe as soon as quota exhaustion resets
+  const unsubReset = onFirestoreQuotaReset(() => {
+    if (!isCancelled && !innerUnsub) {
+      trySubscribe();
+    }
+  });
+
+  return () => {
+    isCancelled = true;
+    unsubReset();
+    if (innerUnsub) {
+      try {
+        innerUnsub();
+      } catch {}
+      innerUnsub = null;
+    }
+  };
 };
 
 /**

@@ -1,6 +1,6 @@
-import { db, doc, getDoc, setDoc, onSnapshot, isFirestoreQuotaExhausted } from '../lib/firebase';
+import { db, doc, getDoc, setDoc, onSnapshot, isFirestoreQuotaExhausted, onFirestoreQuotaReset } from '../lib/firebase';
 import { buildApiUrl, hasBackendServer } from '../lib/apiConfig';
-import { fetchRawGithubJson } from '../lib/githubSyncService';
+import { fetchRawGithubJson, getGithubConfig, commitGithubDataFile } from '../lib/githubSyncService';
 
 export const DEFAULT_GENRES: string[] = [
   'Tất cả các thể loại mùa hè',
@@ -97,11 +97,13 @@ if (typeof window !== 'undefined') {
   }
 }
 
-// Initial Firestore sync using site_stats (only if not quota exhausted)
-if (db && !isFirestoreQuotaExhausted()) {
+// Firestore sync using site_stats with automatic quota reset re-connection
+let unsubGenresFs: (() => void) | null = null;
+const setupFirestoreGenres = () => {
+  if (unsubGenresFs || !db || isFirestoreQuotaExhausted()) return;
   try {
     const statsGenresDoc = doc(db, 'site_stats', 'genres');
-    onSnapshot(
+    unsubGenresFs = onSnapshot(
       statsGenresDoc,
       (snapshot) => {
         if (snapshot.exists()) {
@@ -120,7 +122,12 @@ if (db && !isFirestoreQuotaExhausted()) {
       }
     );
   } catch {}
-}
+};
+
+setupFirestoreGenres();
+onFirestoreQuotaReset(() => {
+  setupFirestoreGenres();
+});
 
 export const getAvailableGenres = (): string[] => {
   return [...cachedGenres];
@@ -156,6 +163,12 @@ export const addGenre = async (newGenre: string): Promise<{ success: boolean; me
     }).catch(() => {});
   }
 
+  // Sync to GitHub if auto-sync enabled
+  const ghConfig = getGithubConfig();
+  if (ghConfig.token && ghConfig.autoSync) {
+    commitGithubDataFile('genres.json', updated, `Thêm thể loại: ${trimmed} [skip ci]`).catch(() => {});
+  }
+
   if (db) {
     try {
       await setDoc(doc(db, 'site_stats', 'genres'), { list: updated, updatedAt: new Date().toISOString() }, { merge: true });
@@ -185,6 +198,12 @@ export const deleteGenre = async (genreToDelete: string): Promise<{ success: boo
     }).catch(() => {});
   }
 
+  // Sync to GitHub if auto-sync enabled
+  const ghConfigDel = getGithubConfig();
+  if (ghConfigDel.token && ghConfigDel.autoSync) {
+    commitGithubDataFile('genres.json', updated, `Xóa thể loại: ${genreToDelete} [skip ci]`).catch(() => {});
+  }
+
   if (db) {
     try {
       await setDoc(doc(db, 'site_stats', 'genres'), { list: updated, updatedAt: new Date().toISOString() }, { merge: true });
@@ -206,6 +225,11 @@ export const resetGenresToDefault = async (): Promise<void> => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ genres: reset }),
     }).catch(() => {});
+  }
+
+  const ghConfigReset = getGithubConfig();
+  if (ghConfigReset.token && ghConfigReset.autoSync) {
+    commitGithubDataFile('genres.json', reset, 'Đặt lại danh sách thể loại mặc định [skip ci]').catch(() => {});
   }
 
   if (db) {
