@@ -3717,15 +3717,13 @@ export const subscribeToStoryChapters = (
 
       unsubFirestore = onSnapshot(
         q,
-        async (snapshot) => {
+        (snapshot) => {
           let cloudDeletedChapterIds = new Set<string>();
           try {
-            const statsDel = await getDoc(doc(db, 'site_stats', 'deleted_records'));
-            if (statsDel.exists()) {
-              const data = statsDel.data();
-              if (Array.isArray(data?.chapterIds)) {
-                data.chapterIds.forEach((id: string) => cloudDeletedChapterIds.add(id));
-              }
+            const rawDel = localStorage.getItem('mel_deleted_chapter_ids');
+            if (rawDel) {
+              const parsed = JSON.parse(rawDel);
+              if (Array.isArray(parsed)) parsed.forEach((id: string) => cloudDeletedChapterIds.add(id));
             }
           } catch {}
 

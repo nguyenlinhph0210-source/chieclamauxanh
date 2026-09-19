@@ -504,62 +504,9 @@ class BackgroundMusicEngine {
   }
 
   private initFirestoreSync() {
+    // Offload playlist entirely to Server API, GitHub CDN (playlist.json), and LocalStorage.
+    // This preserves 100% of Firebase Quota for Comments, Letters, and Reader Reactions!
     this.pullServerPlaylist();
-
-    if (isFirestoreQuotaExhausted()) {
-      return;
-    }
-
-    try {
-      const playlistDoc = doc(db, 'site_stats', 'music_playlist');
-      onSnapshot(
-        playlistDoc,
-        (snapshot) => {
-          if (snapshot.exists()) {
-            const data = snapshot.data();
-            if (Array.isArray(data?.tracks) && data.tracks.length > 0) {
-              this.mergeTracks(data.tracks);
-            }
-          }
-        },
-        (err) => {
-          console.warn('Firestore music_playlist subscription note:', err.message);
-        }
-      );
-
-      const tracksCol = collection(db, 'music_tracks');
-      onSnapshot(
-        tracksCol,
-        (snapshot) => {
-          if (!snapshot.empty) {
-            const remoteTracks: AudioTrack[] = [];
-            snapshot.forEach((docSnap) => {
-              const data = docSnap.data();
-              remoteTracks.push({
-                id: docSnap.id,
-                title: data.title || 'Giai điệu',
-                artist: data.artist || 'Mellifluous',
-                duration: data.duration || '03:30',
-                mood: data.mood || 'Thư giãn',
-                audioUrl: data.audioUrl || '',
-                sourceType: data.sourceType || (data.audioUrl ? 'direct' : 'synth'),
-                fileSize: data.fileSize,
-                addedBy: data.addedBy || 'Tác giả',
-                createdAt: data.createdAt || new Date().toISOString(),
-              });
-            });
-
-            remoteTracks.sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
-            if (remoteTracks.length > 0) {
-              this.mergeTracks(remoteTracks);
-            }
-          }
-        },
-        () => {}
-      );
-    } catch (e) {
-      console.warn('Firestore sync init error:', e);
-    }
   }
 
   public async pullServerPlaylist() {
