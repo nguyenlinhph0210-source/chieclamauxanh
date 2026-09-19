@@ -244,7 +244,18 @@ export const HomeOtherSection: React.FC<HomeOtherSectionProps> = ({ onGoToOtherP
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">{letter.avatar}</span>
+                    <div className="w-7 h-7 rounded-full bg-pink-100 dark:bg-stone-750 text-pink-700 dark:text-pink-300 flex items-center justify-center text-xs shrink-0 overflow-hidden shadow-2xs">
+                      {letter.avatar && (letter.avatar.startsWith('http://') || letter.avatar.startsWith('https://') || letter.avatar.startsWith('data:')) ? (
+                        <img
+                          src={letter.avatar}
+                          alt={letter.sender}
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <span className="text-base select-none">{letter.avatar || '💌'}</span>
+                      )}
+                    </div>
                     <div>
                       <span className="font-serif text-xs font-bold text-stone-800 dark:text-stone-100">
                         {letter.sender}

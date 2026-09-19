@@ -313,8 +313,17 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
 
                   {/* Avatar with Type Icon Badge */}
                   <div className="relative shrink-0">
-                    <div className="w-8 h-8 rounded-full bg-pink-100 dark:bg-stone-750 text-pink-700 dark:text-pink-300 flex items-center justify-center text-sm shadow-2xs">
-                      {item.avatar || getBadgeEmoji(item.type)}
+                    <div className="w-8 h-8 rounded-full bg-pink-100 dark:bg-stone-750 text-pink-700 dark:text-pink-300 flex items-center justify-center text-sm shadow-2xs overflow-hidden">
+                      {item.avatar && (item.avatar.startsWith('http://') || item.avatar.startsWith('https://') || item.avatar.startsWith('data:')) ? (
+                        <img
+                          src={item.avatar}
+                          alt={item.title || 'Avatar'}
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <span className="text-xs select-none">{item.avatar || getBadgeEmoji(item.type)}</span>
+                      )}
                     </div>
                     <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 flex items-center justify-center text-[9px]">
                       {getBadgeEmoji(item.type)}
@@ -336,7 +345,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
                       {item.subtitle}
                     </div>
 
-                    <div className="text-[11px] text-stone-500 dark:text-stone-400 italic line-clamp-2 pl-2 border-l-2 border-pink-200 dark:border-pink-900 mt-1">
+                    <div className="text-[11px] text-stone-500 dark:text-stone-400 italic line-clamp-2 pl-2 border-l-2 border-pink-200 dark:border-pink-900 mt-1 break-words">
                       "{item.contentSnippet}"
                     </div>
                   </div>

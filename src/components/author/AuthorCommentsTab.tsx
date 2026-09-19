@@ -247,8 +247,17 @@ export const AuthorCommentsTab: React.FC<AuthorCommentsTabProps> = ({
                 {/* Comment Header */}
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-pink-100 dark:bg-stone-700 text-pink-700 dark:text-pink-300 flex items-center justify-center text-sm shrink-0 select-none shadow-2xs">
-                      {comment.avatar || '🌸'}
+                    <div className="w-8 h-8 rounded-full bg-pink-100 dark:bg-stone-700 text-pink-700 dark:text-pink-300 flex items-center justify-center text-sm shrink-0 select-none shadow-2xs overflow-hidden">
+                      {comment.avatar && (comment.avatar.startsWith('http://') || comment.avatar.startsWith('https://') || comment.avatar.startsWith('data:')) ? (
+                        <img
+                          src={comment.avatar}
+                          alt={comment.user || 'Avatar'}
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <span>{comment.avatar || '🌸'}</span>
+                      )}
                     </div>
                     <div>
                       <div className="flex items-center gap-1.5 flex-wrap">
@@ -309,7 +318,13 @@ export const AuthorCommentsTab: React.FC<AuthorCommentsTabProps> = ({
                         }`}
                       >
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs select-none">{r.avatar || '🌸'}</span>
+                          <div className="w-4 h-4 rounded-full overflow-hidden flex items-center justify-center shrink-0">
+                            {r.avatar && (r.avatar.startsWith('http://') || r.avatar.startsWith('https://') || r.avatar.startsWith('data:')) ? (
+                              <img src={r.avatar} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            ) : (
+                              <span className="text-xs select-none">{r.avatar || '🌸'}</span>
+                            )}
+                          </div>
                           <span className="font-semibold text-stone-850 dark:text-stone-100 text-[11px]">
                             {r.user}
                           </span>

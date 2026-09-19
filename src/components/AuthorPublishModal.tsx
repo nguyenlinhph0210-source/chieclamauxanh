@@ -424,7 +424,20 @@ export const AuthorPublishModal: React.FC<AuthorPublishModalProps> = ({
 
     setIsSendingReply(true);
     try {
-      await replyToReaderLetter(letterId, authorReplyInput.trim());
+      const authorName = user?.displayName || user?.nickname || 'Mellifluous (Tác giả)';
+      await replyToReaderLetter(letterId, authorReplyInput.trim(), authorName);
+      setLetters((prev) =>
+        prev.map((l) =>
+          l.id === letterId
+            ? {
+                ...l,
+                replyFromMel: authorReplyInput.trim(),
+                repliedAt: new Date().toISOString(),
+                repliedBy: authorName,
+              }
+            : l
+        )
+      );
       showFeedback('success', 'Đã gửi phản hồi đến bạn đọc thành công!');
       setReplyingLetterId(null);
       setAuthorReplyInput('');
@@ -438,6 +451,7 @@ export const AuthorPublishModal: React.FC<AuthorPublishModalProps> = ({
   const handleDeleteLetter = async (letterId: string) => {
     try {
       await deleteReaderLetter(letterId);
+      setLetters((prev) => prev.filter((l) => l.id !== letterId));
       showFeedback('success', 'Đã xóa thư thành công.');
       setLetterToDelete(null);
     } catch {
@@ -470,9 +484,11 @@ export const AuthorPublishModal: React.FC<AuthorPublishModalProps> = ({
   };
 
   const filteredLetters = letters.filter((l) => {
-    if (letterFilter === 'unanswered') return !l.authorReply;
-    if (letterFilter === 'private') return l.isPrivate;
-    if (letterFilter === 'public') return !l.isPrivate;
+    const isAnswered = Boolean(l.replyFromMel || (l as any).authorReply);
+    const isPrivate = l.type === 'private' || Boolean((l as any).isPrivate);
+    if (letterFilter === 'unanswered') return !isAnswered;
+    if (letterFilter === 'private') return isPrivate;
+    if (letterFilter === 'public') return !isPrivate;
     return true;
   });
 
@@ -1337,7 +1353,7 @@ export const AuthorPublishModal: React.FC<AuthorPublishModalProps> = ({
                         : 'bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-200 hover:bg-pink-50 dark:hover:bg-stone-700 border border-transparent dark:border-stone-700'
                     }`}
                   >
-                    Chưa hồi đáp ({letters.filter((l) => !l.authorReply).length})
+                    Chưa hồi đáp ({letters.filter((l) => !(l.replyFromMel || (l as any).authorReply)).length})
                   </button>
                   <button
                     type="button"
@@ -1348,7 +1364,18 @@ export const AuthorPublishModal: React.FC<AuthorPublishModalProps> = ({
                         : 'bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-200 hover:bg-pink-50 dark:hover:bg-stone-700 border border-transparent dark:border-stone-700'
                     }`}
                   >
-                    Thư riêng tư ({letters.filter((l) => l.isPrivate).length})
+                    Thư riêng tư ({letters.filter((l) => l.type === 'private' || Boolean((l as any).isPrivate)).length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLetterFilter('public')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-colors ${
+                      letterFilter === 'public'
+                        ? 'bg-pink-500 text-white shadow-xs'
+                        : 'bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-200 hover:bg-pink-50 dark:hover:bg-stone-700 border border-transparent dark:border-stone-700'
+                    }`}
+                  >
+                    Công khai ({letters.filter((l) => l.type !== 'private' && !(l as any).isPrivate).length})
                   </button>
                 </div>
               </div>
@@ -1359,121 +1386,190 @@ export const AuthorPublishModal: React.FC<AuthorPublishModalProps> = ({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {filteredLetters.map((letter) => (
-                    <div
-                      key={letter.id}
-                      className="p-4 rounded-2xl bg-white dark:bg-stone-850 border border-stone-200 dark:border-stone-700 space-y-3"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-xs sm:text-sm text-stone-900 dark:text-stone-100">
-                              {letter.senderName || 'Độc giả giấu tên'}
-                            </span>
-                            {letter.tag && (
-                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-100 dark:bg-pink-950 text-pink-700 dark:text-pink-300 font-medium">
-                                {letter.tag}
-                              </span>
-                            )}
-                            {letter.isPrivate && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 flex items-center gap-0.5 font-medium">
-                                <Lock className="w-2.5 h-2.5" />
-                                <span>Thư riêng</span>
-                              </span>
-                            )}
+                  {filteredLetters.map((letter) => {
+                    const isPrivate = letter.type === 'private' || Boolean((letter as any).isPrivate);
+                    const senderName = letter.sender || (letter as any).senderName || 'Độc giả giấu tên';
+                    const letterContent = letter.content || (letter as any).message || '';
+                    const hasReply = Boolean(letter.replyFromMel || (letter as any).authorReply);
+                    const replyContent = letter.replyFromMel || (letter as any).authorReply || '';
+
+                    return (
+                      <div
+                        key={letter.id}
+                        className="p-4 rounded-2xl bg-white dark:bg-stone-850 border border-stone-200 dark:border-stone-700 space-y-3"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-start gap-2.5 min-w-0">
+                            <div className="w-8 h-8 rounded-full bg-pink-100 dark:bg-stone-750 text-pink-700 dark:text-pink-300 flex items-center justify-center text-xs shrink-0 overflow-hidden shadow-2xs">
+                              {letter.avatar && (letter.avatar.startsWith('http://') || letter.avatar.startsWith('https://') || letter.avatar.startsWith('data:')) ? (
+                                <img
+                                  src={letter.avatar}
+                                  alt={senderName}
+                                  className="w-full h-full object-cover"
+                                  referrerPolicy="no-referrer"
+                                />
+                              ) : (
+                                <span className="select-none text-base">{letter.avatar || '💌'}</span>
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-bold text-xs sm:text-sm text-stone-900 dark:text-stone-100">
+                                  {senderName}
+                                </span>
+                                {letter.senderEmail && (
+                                  <span className="text-[10px] text-stone-400 font-mono truncate max-w-[180px]">
+                                    ({letter.senderEmail})
+                                  </span>
+                                )}
+                                {letter.tag && (
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-100 dark:bg-pink-950 text-pink-700 dark:text-pink-300 font-medium">
+                                    {letter.tag}
+                                  </span>
+                                )}
+                                {isPrivate ? (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 flex items-center gap-0.5 font-medium">
+                                    <Lock className="w-2.5 h-2.5" />
+                                    <span>Thư riêng</span>
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 flex items-center gap-0.5 font-medium">
+                                    <span>Công khai</span>
+                                  </span>
+                                )}
+                                {letter.secretLookupCode && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 font-mono font-semibold">
+                                    Mã: {letter.secretLookupCode}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-stone-400 font-mono mt-0.5">
+                                {letter.createdAt ? new Date(letter.createdAt).toLocaleString('vi-VN') : (letter.time || '')}
+                              </p>
+                            </div>
                           </div>
-                          <p className="text-[11px] text-stone-400 font-mono mt-0.5">
-                            {letter.createdAt ? new Date(letter.createdAt).toLocaleDateString('vi-VN') : ''}
-                          </p>
+
+                          {letterToDelete === letter.id ? (
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteLetter(letter.id)}
+                                className="px-2 py-1 rounded text-[10px] font-bold bg-rose-500 text-white cursor-pointer"
+                              >
+                                Xóa
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setLetterToDelete(null)}
+                                className="px-1.5 py-1 rounded text-[10px] text-stone-500 hover:bg-stone-200 dark:hover:bg-stone-700 cursor-pointer"
+                              >
+                                Hủy
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setLetterToDelete(letter.id)}
+                              className="p-1 text-stone-400 hover:text-rose-500 cursor-pointer shrink-0"
+                              title="Xóa thư này"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
 
-                        {letterToDelete === letter.id ? (
-                          <div className="flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteLetter(letter.id)}
-                              className="px-2 py-1 rounded text-[10px] font-bold bg-rose-500 text-white cursor-pointer"
-                            >
-                              Xóa
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setLetterToDelete(null)}
-                              className="px-1.5 py-1 rounded text-[10px] text-stone-500 hover:bg-stone-200 dark:hover:bg-stone-700 cursor-pointer"
-                            >
-                              Hủy
-                            </button>
+                        {/* Letter Content */}
+                        <div className="text-xs sm:text-sm text-stone-800 dark:text-stone-100 leading-relaxed font-serif bg-stone-50/80 dark:bg-stone-800/80 p-3.5 rounded-xl border border-stone-200/60 dark:border-stone-700 whitespace-pre-wrap">
+                          <RichTextRenderer content={letterContent} indentParagraphs={false} />
+                        </div>
+
+                        {/* Reply Section */}
+                        {hasReply ? (
+                          <div className="p-3.5 rounded-xl bg-pink-50/80 dark:bg-stone-900 border border-pink-200/80 dark:border-pink-900/60 space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] font-bold text-pink-700 dark:text-pink-300 flex items-center gap-1">
+                                <Reply className="w-3 h-3" />
+                                <span>{letter.repliedBy || 'Mellifluous'} đã hồi đáp:</span>
+                              </span>
+                              {letter.repliedAt && (
+                                <span className="text-[10px] text-stone-400 font-mono">
+                                  {new Date(letter.repliedAt).toLocaleString('vi-VN')}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-stone-800 dark:text-stone-100 leading-relaxed font-serif">
+                              <RichTextRenderer content={replyContent} indentParagraphs={false} />
+                            </div>
+                            {replyingLetterId !== letter.id && (
+                              <div className="pt-1">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setReplyingLetterId(letter.id);
+                                    setAuthorReplyInput(replyContent);
+                                  }}
+                                  className="text-[11px] text-pink-600 dark:text-pink-400 hover:text-pink-700 dark:hover:text-pink-300 font-medium hover:underline flex items-center gap-1 cursor-pointer"
+                                >
+                                  <Reply className="w-3 h-3" />
+                                  <span>Chỉnh sửa hồi đáp</span>
+                                </button>
+                              </div>
+                            )}
                           </div>
-                        ) : (
+                        ) : null}
+
+                        {replyingLetterId === letter.id ? (
+                          <div className="space-y-2 pt-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-semibold text-stone-700 dark:text-stone-300">
+                                {hasReply ? 'Chỉnh sửa phản hồi gửi đến độc giả:' : 'Viết phản hồi gửi đến độc giả:'}
+                              </span>
+                            </div>
+                            <RichTextEditor
+                              placeholder="Nhập lời nhắn gửi của bạn tới độc giả..."
+                              value={authorReplyInput}
+                              onChange={setAuthorReplyInput}
+                              minHeight={110}
+                              fontFamily="serif"
+                            />
+                            <div className="flex justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleSendReply(letter.id)}
+                                disabled={isSendingReply}
+                                className="px-3.5 py-1.5 rounded-lg bg-pink-500 hover:bg-pink-600 text-white text-xs font-semibold flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                              >
+                                <Send className="w-3 h-3" />
+                                <span>{isSendingReply ? 'Đang gửi...' : hasReply ? 'Cập nhật hồi đáp' : 'Gửi hồi đáp'}</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setReplyingLetterId(null);
+                                  setAuthorReplyInput('');
+                                }}
+                                className="px-3 py-1.5 rounded-lg border border-stone-300 dark:border-stone-600 text-stone-700 dark:text-stone-200 text-xs hover:bg-stone-100 dark:hover:bg-stone-800 cursor-pointer"
+                              >
+                                Hủy
+                              </button>
+                            </div>
+                          </div>
+                        ) : !hasReply ? (
                           <button
                             type="button"
-                            onClick={() => setLetterToDelete(letter.id)}
-                            className="p-1 text-stone-400 hover:text-rose-500 cursor-pointer"
-                            title="Xóa thư này"
+                            onClick={() => {
+                              setReplyingLetterId(letter.id);
+                              setAuthorReplyInput('');
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-pink-100 hover:bg-pink-200 dark:bg-pink-950/70 dark:hover:bg-pink-900 text-pink-700 dark:text-pink-300 text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="text-xs sm:text-sm text-stone-800 dark:text-stone-100 leading-relaxed font-serif bg-stone-50/80 dark:bg-stone-800/80 p-3 rounded-xl border border-stone-200/60 dark:border-stone-700">
-                        <RichTextRenderer content={letter.message} indentParagraphs={false} />
-                      </div>
-
-                      {/* Reply Section */}
-                      {letter.authorReply ? (
-                        <div className="p-3 rounded-xl bg-pink-50/80 dark:bg-stone-900 border border-pink-200/80 dark:border-pink-900/60 space-y-1">
-                          <span className="text-[11px] font-bold text-pink-700 dark:text-pink-300 flex items-center gap-1">
                             <Reply className="w-3 h-3" />
-                            <span>Mellifluous đã hồi đáp:</span>
-                          </span>
-                          <div className="text-xs text-stone-800 dark:text-stone-100 leading-relaxed font-serif">
-                            <RichTextRenderer content={letter.authorReply} indentParagraphs={false} />
-                          </div>
-                        </div>
-                      ) : replyingLetterId === letter.id ? (
-                        <div className="space-y-2 pt-1">
-                          <RichTextEditor
-                            placeholder="Nhập lời nhắn gửi của bạn tới độc giả..."
-                            value={authorReplyInput}
-                            onChange={setAuthorReplyInput}
-                            minHeight={110}
-                            fontFamily="serif"
-                          />
-                          <div className="flex justify-end gap-2">
-                            <button
-                              type="button"
-                              onClick={() => handleSendReply(letter.id)}
-                              disabled={isSendingReply}
-                              className="px-3.5 py-1.5 rounded-lg bg-pink-500 hover:bg-pink-600 text-white text-xs font-semibold flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                            >
-                              <Send className="w-3 h-3" />
-                              <span>{isSendingReply ? 'Đang gửi...' : 'Gửi hồi đáp'}</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setReplyingLetterId(null)}
-                              className="px-3 py-1.5 rounded-lg border border-stone-300 dark:border-stone-600 text-stone-700 dark:text-stone-200 text-xs hover:bg-stone-100 dark:hover:bg-stone-800 cursor-pointer"
-                            >
-                              Hủy
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setReplyingLetterId(letter.id);
-                            setAuthorReplyInput('');
-                          }}
-                          className="px-3 py-1.5 rounded-lg bg-pink-100 hover:bg-pink-200 dark:bg-pink-950/70 dark:hover:bg-pink-900 text-pink-700 dark:text-pink-300 text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors"
-                        >
-                          <Reply className="w-3 h-3" />
-                          <span>Viết hồi đáp độc giả</span>
-                        </button>
-                      )}
-                    </div>
-                  ))}
+                            <span>Viết hồi đáp độc giả</span>
+                          </button>
+                        ) : null}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

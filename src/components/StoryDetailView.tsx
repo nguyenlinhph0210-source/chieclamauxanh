@@ -918,7 +918,7 @@ export const StoryDetailView: React.FC<StoryDetailViewProps> = ({
                 >
                   <div className="flex items-start gap-3">
                     <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-sm shrink-0 ${
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-sm shrink-0 overflow-hidden ${
                         isCmtMainAuthor
                           ? 'bg-rose-100 text-rose-700 dark:bg-rose-900 dark:text-rose-200 ring-2 ring-rose-400/50'
                           : isCmtCollaborator
@@ -926,7 +926,11 @@ export const StoryDetailView: React.FC<StoryDetailViewProps> = ({
                           : 'bg-pink-100 dark:bg-pink-950 text-pink-600'
                       }`}
                     >
-                      {cmt.avatar || (isCmtMainAuthor ? '🌸' : isCmtCollaborator ? '🌿' : '💬')}
+                      {cmt.avatar && (cmt.avatar.startsWith('http://') || cmt.avatar.startsWith('https://') || cmt.avatar.startsWith('data:')) ? (
+                        <img src={cmt.avatar} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      ) : (
+                        <span>{cmt.avatar || (isCmtMainAuthor ? '🌸' : isCmtCollaborator ? '🌿' : '💬')}</span>
+                      )}
                     </div>
                     <div className="flex-1 space-y-1 min-w-0">
                       <div className="flex items-center justify-between text-xs gap-2 flex-wrap">

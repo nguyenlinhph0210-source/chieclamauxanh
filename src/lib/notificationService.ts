@@ -102,6 +102,18 @@ let isListeningLetters = false;
 let unsubComments: (() => void) | null = null;
 let unsubLetters: (() => void) | null = null;
 
+const cleanNotificationSnippet = (text?: string): string => {
+  if (!text) return '';
+  return text
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
 const buildNotificationsList = (context: NotificationUserContext): { items: AuthorNotificationItem[]; unreadCount: number } => {
   // REQUIREMENT 1: Guest / unauthenticated users CANNOT see notifications
   if (!context || !context.user) {
@@ -138,7 +150,7 @@ const buildNotificationsList = (context: NotificationUserContext): { items: Auth
         type: 'comment',
         title: c.user || 'Độc giả yêu truyện',
         subtitle: `đã bình luận ở ${chLabel} · ${storyTitle}`,
-        contentSnippet: c.text ? c.text.substring(0, 100) : 'Bình luận mới',
+        contentSnippet: cleanNotificationSnippet(c.text).substring(0, 100) || 'Bình luận mới',
         timeAgo: formatNotificationTime(c.createdAt),
         createdAt: c.createdAt || new Date().toISOString(),
         avatar: c.avatar || '🌸',
@@ -164,7 +176,7 @@ const buildNotificationsList = (context: NotificationUserContext): { items: Auth
         type: 'letter',
         title: l.sender || 'Bạn đọc giấu tên',
         subtitle: `đã gửi một ${typeLabel}`,
-        contentSnippet: l.content ? l.content.substring(0, 100) : 'Lá thư mới',
+        contentSnippet: cleanNotificationSnippet(l.content).substring(0, 100) || 'Lá thư mới',
         timeAgo: formatNotificationTime(l.createdAt),
         createdAt: l.createdAt || new Date().toISOString(),
         avatar: l.avatar || '💌',
@@ -212,7 +224,7 @@ const buildNotificationsList = (context: NotificationUserContext): { items: Auth
               type: 'reply',
               title: `${rep.user || 'Tác giả'} (Tác giả/Cộng sự)`,
               subtitle: `đã phản hồi bình luận của bạn tại ${chLabel} · ${storyTitle}`,
-              contentSnippet: rep.text ? rep.text.substring(0, 100) : 'Đã phản hồi bình luận của bạn',
+              contentSnippet: cleanNotificationSnippet(rep.text).substring(0, 100) || 'Đã phản hồi bình luận của bạn',
               timeAgo: formatNotificationTime(rep.createdAt),
               createdAt: rep.createdAt || c.createdAt || new Date().toISOString(),
               avatar: rep.avatar || '💬',
