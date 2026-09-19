@@ -1,0 +1,69 @@
+[
+  {
+    "id": "comm_1789667569971_57mq9",
+    "storyId": "chao-tiep-ha",
+    "chapterNumber": 2,
+    "chapterId": "chao-tiep-ha-c2",
+    "user": "Bạn đọc yêu truyện",
+    "isAuthor": false,
+    "isCollaborator": false,
+    "avatar": "🌸",
+    "text": "okvaccddiien vãi",
+    "likes": 0,
+    "likedBy": [],
+    "replies": [
+      {
+        "user": "Độc giả",
+        "avatar": "🌟",
+        "text": "Phản hồi thử nghiệm",
+        "isAuthor": false
+      }
+    ],
+    "createdAt": "2026-09-17T17:52:49.971Z"
+  },
+  {
+    "id": "comm_1789667553159_4j73w",
+    "storyId": "chao-tiep-ha",
+    "chapterNumber": 2,
+    "chapterId": "chao-tiep-ha-c2",
+    "user": "Bạn đọc yêu truyện",
+    "isAuthor": false,
+    "isCollaborator": false,
+    "avatar": "🌸",
+    "text": "vacc",
+    "likes": 0,
+    "likedBy": [],
+    "replies": [],
+    "createdAt": "2026-09-17T17:52:33.159Z"
+  },
+  {
+    "id": "comm_1789667545062_v2w3w",
+    "storyId": "chao-tiep-ha",
+    "chapterNumber": 1,
+    "chapterId": "chao-tiep-ha-c1",
+    "user": "Bạn đọc yêu truyện",
+    "isAuthor": false,
+    "isCollaborator": false,
+    "avatar": "🌸",
+    "text": "à ok",
+    "likes": 0,
+    "likedBy": [],
+    "replies": [],
+    "createdAt": "2026-09-17T17:52:25.062Z"
+  },
+  {
+    "id": "comm_1789666643050_s94md",
+    "storyId": "chao-tiep-ha",
+    "chapterNumber": 1,
+    "chapterId": "chao-tiep-ha-c1",
+    "user": "Bạn đọc yêu truyện",
+    "isAuthor": false,
+    "isCollaborator": false,
+    "avatar": "🌸",
+    "text": "tr má",
+    "likes": 0,
+    "likedBy": [],
+    "replies": [],
+    "createdAt": "2026-09-17T17:37:23.050Z"
+  }
+]

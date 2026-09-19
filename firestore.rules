@@ -1,0 +1,109 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Site-wide statistics: Any reader can view and update visit counters
+    match /site_stats/{statId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Story stats: public read, allow incrementing views, likes, ratings
+    match /story_stats/{storyId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Chapter stats: public read, allow incrementing views and likes
+    match /chapter_stats/{chapterKey} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Reader Comments: public read and write so all visitors can comment and reply in real time
+    match /comments/{commentId} {
+      allow read, write: if true;
+    }
+
+    // Reader Letters & Confessions (Hòm thư tâm sự & Tình cảm)
+    match /reader_letters/{letterId} {
+      allow read, write: if true;
+    }
+
+    // Newsletter & story followers
+    match /newsletter_subscribers/{subId} {
+      allow read: if true;
+      allow create: if request.resource.data.email is string;
+      allow update, delete: if true;
+    }
+
+    // Stories published by author/translator
+    match /stories/{storyId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Chapters published for stories
+    match /chapters/{chapterId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Announcements and notice board posts
+    match /announcements/{noticeId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Music playlist tracks (custom audio links added by author/admin)
+    match /music_tracks/{trackId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Site configuration and publishing status
+    match /site_config/{configId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Site settings (genres, preferences, metadata)
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Reader Realtime Presence
+    match /reader_presences/{visitorId} {
+      allow read, write: if true;
+    }
+
+    // User profiles (display name, bio, avatar, nickname, roles)
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+
+    // Collaborators, Co-authors, and Administrators management
+    match /collaborators/{collabId} {
+      allow read, write: if true;
+    }
+
+    // Username to Email mapping directory (for username login)
+    match /usernames/{username} {
+      allow read, write: if true;
+    }
+
+    // User credentials and email directory (for fallback authentication)
+    match /account_credentials/{uid} {
+      allow read, write: if true;
+    }
+
+    match /user_emails/{emailKey} {
+      allow read, write: if true;
+    }
+
+    // System settings (e.g., deleted stories registry, global configurations)
+    match /system_settings/{settingId} {
+      allow read, write: if true;
+    }
+  }
+}

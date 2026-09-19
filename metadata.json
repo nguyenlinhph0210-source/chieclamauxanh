@@ -1,0 +1,8 @@
+{
+  "name": "Remix binhyentronggio",
+  "description": "Imported from GitHub: mellifluous740-glitch/binhyentronggio",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
