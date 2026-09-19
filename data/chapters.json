@@ -1041,9 +1041,9 @@
       "id": "huong-dan-lang-phi-tinh-yeu-extra56",
       "storyId": "huong-dan-lang-phi-tinh-yeu",
       "chapterNumber": 56,
-      "title": "After 18 (01)",
+      "title": "Không chỉ tối nay",
       "publishedAt": "2026-09-19T16:54:44.206Z",
-      "updatedAt": "2026-09-19T16:54:44.206Z",
+      "updatedAt": "2026-09-19T17:24:49.074Z",
       "isLocked": true,
       "passwordHint": "Đài quan sát Sương Vũ và Mộng Tiêu đi trong chương trước (Có viết hoa)",
       "passwordKey": "shibuyasky",
@@ -1069,7 +1069,9 @@
       "wordCount": 14399,
       "isExtra": true,
       "extraNumber": 58,
-      "partType": "extra"
+      "partType": "extra",
+      "chapterId": "huong-dan-lang-phi-tinh-yeu-extra57",
+      "deleted": false
     },
     {
       "id": "huong-dan-lang-phi-tinh-yeu-extra58",
