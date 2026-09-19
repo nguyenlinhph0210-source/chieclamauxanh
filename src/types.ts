@@ -104,6 +104,8 @@ export interface ReaderLetter {
   sender: string;
   senderEmail?: string;
   senderUid?: string;
+  userEmail?: string;
+  userId?: string;
   avatar: string;
   content: string;
   type: 'public' | 'private';

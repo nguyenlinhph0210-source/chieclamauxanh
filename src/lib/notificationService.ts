@@ -14,7 +14,7 @@ import {
 } from '../data/mockData';
 import { Story, Chapter, Announcement } from '../types';
 
-export type NotificationType = 'comment' | 'letter' | 'chapter' | 'story' | 'reply' | 'announcement';
+export type NotificationType = 'comment' | 'letter' | 'chapter' | 'story' | 'reply' | 'announcement' | 'letter_reply';
 
 export interface AuthorNotificationItem {
   id: string;
@@ -200,8 +200,9 @@ const buildNotificationsList = (context: NotificationUserContext): { items: Auth
   if (!isInternalRole && context.user) {
     const userEmail = (context.user.email || '').toLowerCase().trim();
     const userName = (context.user.displayName || context.user.nickname || '').trim().toLowerCase();
+    const userUid = context.user.uid || '';
 
-    // 1. Author replies to this reader's comments
+    // 1. Replies to this reader's comments (from author, collaborator, or other readers)
     currentComments.forEach((c) => {
       if (isStoryDeleted(c.storyId)) return;
       if (!storyMap.has(c.storyId)) return;
@@ -217,23 +218,72 @@ const buildNotificationsList = (context: NotificationUserContext): { items: Auth
         const chLabel = c.chapterNumber ? `Chương ${c.chapterNumber}` : 'Truyện';
 
         c.replies.forEach((rep, idx) => {
-          if (rep.isAuthor || rep.isCollaborator) {
-            const replyId = rep.id || `reply_${c.id}_${idx}`;
-            items.push({
-              id: replyId,
-              type: 'reply',
-              title: `${rep.user || 'Tác giả'} (Tác giả/Cộng sự)`,
-              subtitle: `đã phản hồi bình luận của bạn tại ${chLabel} · ${storyTitle}`,
-              contentSnippet: cleanNotificationSnippet(rep.text).substring(0, 100) || 'Đã phản hồi bình luận của bạn',
-              timeAgo: formatNotificationTime(rep.createdAt),
-              createdAt: rep.createdAt || c.createdAt || new Date().toISOString(),
-              avatar: rep.avatar || '💬',
-              isRead: readIds.has(replyId),
-              storyId: c.storyId,
-              storyTitle,
-              chapterNumber: c.chapterNumber,
-            });
-          }
+          // Exclude self-replies
+          const repEmail = (rep.userEmail || '').toLowerCase().trim();
+          const repName = (rep.user || '').toLowerCase().trim();
+          const isSelf =
+            (userEmail && repEmail && userEmail === repEmail) ||
+            (userName && repName && userName === repName);
+          if (isSelf) return;
+
+          const replyId = rep.id || `reply_${c.id}_${idx}`;
+          const isAuthorRole = rep.isAuthor;
+          const isCollabRole = rep.isCollaborator;
+          const roleTag = isAuthorRole
+            ? ' (Tác giả 🌸)'
+            : isCollabRole
+            ? ' (Cộng sự 🌿)'
+            : '';
+          const replierDisplayName = `${rep.user || 'Bạn đọc'}${roleTag}`;
+
+          items.push({
+            id: replyId,
+            type: 'reply',
+            title: replierDisplayName,
+            subtitle: `đã phản hồi bình luận của bạn tại ${chLabel} · ${storyTitle}`,
+            contentSnippet: cleanNotificationSnippet(rep.text).substring(0, 100) || 'Đã phản hồi bình luận của bạn',
+            timeAgo: formatNotificationTime(rep.createdAt),
+            createdAt: rep.createdAt || c.createdAt || new Date().toISOString(),
+            avatar: rep.avatar || (isAuthorRole ? '🌸' : '💬'),
+            isRead: readIds.has(replyId),
+            storyId: c.storyId,
+            storyTitle,
+            chapterNumber: c.chapterNumber,
+          });
+        });
+      }
+    });
+
+    // 2. Author/Collaborator replies to this reader's letters (Tâm thư cá nhân)
+    currentLetters.forEach((l) => {
+      if (isLetterDeleted(l.id)) return;
+
+      const letterEmail = (l.userEmail || l.senderEmail || '').toLowerCase().trim();
+      const letterUid = l.userId || l.senderUid || '';
+      const isMyLetter =
+        (userEmail && letterEmail && userEmail === letterEmail) ||
+        (userUid && letterUid && userUid === letterUid);
+
+      const hasReply = Boolean(l.replyFromMel || (l as any).authorReply);
+
+      if (isMyLetter && hasReply) {
+        const replyText = l.replyFromMel || (l as any).authorReply || '';
+        const letterSnippet = cleanNotificationSnippet(l.content).substring(0, 35);
+        const replySnippet = cleanNotificationSnippet(replyText).substring(0, 100);
+        const replyId = `letter_reply_${l.id}`;
+        const replier = l.repliedBy || 'Mellifluous (Tác giả)';
+
+        items.push({
+          id: replyId,
+          type: 'letter_reply',
+          title: `${replier} 🌸`,
+          subtitle: `đã hồi đáp tâm thư của bạn: "${letterSnippet}..."`,
+          contentSnippet: replySnippet || 'Tác giả đã gửi lời nhắn hồi đáp tâm thư của bạn.',
+          timeAgo: formatNotificationTime(l.repliedAt || l.createdAt),
+          createdAt: l.repliedAt || l.createdAt || new Date().toISOString(),
+          avatar: '🌸',
+          isRead: readIds.has(replyId),
+          rawLetter: l,
         });
       }
     });

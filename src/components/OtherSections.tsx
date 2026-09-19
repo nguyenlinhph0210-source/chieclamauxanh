@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Sparkles,
   Music,
@@ -37,6 +37,45 @@ import {
 import { useAuth } from '../lib/authContext';
 import { RichTextRenderer } from './common/RichTextRenderer';
 import { RichTextEditor } from './common/RichTextEditor';
+
+// Helpers to store and retrieve personal secret lookup codes safely on user device
+const savePersonalLetterCode = (code: string, userId?: string) => {
+  try {
+    const storageKey = `mel_saved_letters_${userId || 'guest'}`;
+    const raw = localStorage.getItem(storageKey);
+    const existing: string[] = raw ? JSON.parse(raw) : [];
+    if (!existing.includes(code.toUpperCase())) {
+      existing.unshift(code.toUpperCase());
+      localStorage.setItem(storageKey, JSON.stringify(existing));
+    }
+  } catch (e) {
+    console.error('Failed to save code locally:', e);
+  }
+};
+
+const getSavedPersonalCodes = (userId?: string): string[] => {
+  try {
+    const list: string[] = [];
+    const keys = [`mel_saved_letters_${userId || 'guest'}`];
+    if (userId) keys.push('mel_saved_letters_guest');
+    keys.forEach((k) => {
+      const raw = localStorage.getItem(k);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((c) => {
+            if (typeof c === 'string' && !list.includes(c.toUpperCase())) {
+              list.push(c.toUpperCase());
+            }
+          });
+        }
+      }
+    });
+    return list;
+  } catch {
+    return [];
+  }
+};
 
 export const OtherSections: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'diary' | 'music' | 'faq'>('diary');
@@ -78,6 +117,23 @@ export const OtherSections: React.FC = () => {
   const [lookupInputCode, setLookupInputCode] = useState('');
   const [lookedUpLetter, setLookedUpLetter] = useState<ReaderLetter | null>(null);
   const [lookupError, setLookupError] = useState('');
+  const [savedCodesVersion, setSavedCodesVersion] = useState(0);
+  const [copiedLetterId, setCopiedLetterId] = useState<string | null>(null);
+
+  // Filter letters belonging to the current user (via auth UID, email, or device-saved codes)
+  const mySentLetters = useMemo(() => {
+    if (!letters || letters.length === 0) return [];
+    const localCodes = getSavedPersonalCodes(user?.uid);
+
+    return letters.filter((l) => {
+      const lUid = l.userId || l.senderUid;
+      const lEmail = l.userEmail || l.senderEmail;
+      if (user?.uid && lUid && lUid === user.uid) return true;
+      if (user?.email && lEmail && lEmail.toLowerCase() === user.email.toLowerCase()) return true;
+      if (l.secretLookupCode && localCodes.includes(l.secretLookupCode.toUpperCase())) return true;
+      return false;
+    });
+  }, [letters, user?.uid, user?.email, savedCodesVersion]);
 
   // Author inline reply state
   const [replyingLetterId, setReplyingLetterId] = useState<string | null>(null);
@@ -129,6 +185,8 @@ export const OtherSections: React.FC = () => {
 
       if (letterType === 'private' && result.secretLookupCode) {
         setCreatedSecretCode(result.secretLookupCode);
+        savePersonalLetterCode(result.secretLookupCode, user.uid);
+        setSavedCodesVersion((v) => v + 1);
         setSentSuccessType('private');
       } else {
         setSentSuccessType('public');
@@ -144,6 +202,57 @@ export const OtherSections: React.FC = () => {
       }, 10000);
     }
   };
+
+  // Automatically open reader letter when triggered by notification or stored active code
+  useEffect(() => {
+    const checkInitialLookup = () => {
+      try {
+        const pendingCode = localStorage.getItem('mel_active_lookup_code');
+        if (pendingCode) {
+          localStorage.removeItem('mel_active_lookup_code');
+          setActiveTab('diary');
+          setLookupInputCode(pendingCode);
+          const match = letters.find(
+            (l) => l.secretLookupCode?.toUpperCase() === pendingCode.toUpperCase()
+          );
+          if (match) {
+            setLookedUpLetter(match);
+          }
+          setTimeout(() => {
+            const el = document.getElementById('reader-letter-lookup-box');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 200);
+        }
+      } catch {}
+    };
+
+    if (letters.length > 0) {
+      checkInitialLookup();
+    }
+
+    const handler = (e: any) => {
+      const code = e.detail?.code;
+      const letter = e.detail?.letter;
+      setActiveTab('diary');
+      if (letter) {
+        setLookedUpLetter(letter);
+        if (code) setLookupInputCode(code);
+      } else if (code) {
+        setLookupInputCode(code);
+        const match = letters.find(
+          (l) => l.secretLookupCode?.toUpperCase() === code.toUpperCase()
+        );
+        if (match) setLookedUpLetter(match);
+      }
+      setTimeout(() => {
+        const el = document.getElementById('reader-letter-lookup-box');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 200);
+    };
+
+    window.addEventListener('open_reader_letter', handler);
+    return () => window.removeEventListener('open_reader_letter', handler);
+  }, [letters]);
 
   const handleLikeLetter = async (id: string) => {
     try {
@@ -559,6 +668,141 @@ export const OtherSections: React.FC = () => {
             </form>
           </div>
 
+          {/* KÉT LƯU TRỮ THƯ RIÊNG CỦA BẠN (CHỈ MÌNH BẠN THẤY) */}
+          {mySentLetters.length > 0 && (
+            <div
+              id="my-private-letters-vault"
+              className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-purple-50 via-pink-50/60 to-rose-50/50 dark:from-stone-900 dark:via-purple-950/20 dark:to-stone-900 border border-purple-200 dark:border-purple-800/60 shadow-xs space-y-3"
+            >
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 rounded-xl bg-purple-500 text-white shadow-2xs">
+                    <Lock className="w-4 h-4" />
+                  </span>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-bold text-stone-800 dark:text-stone-100 flex items-center gap-1.5">
+                      <span>Két Lưu Trữ Thư Của Bạn</span>
+                      <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300 text-[10px] font-mono font-semibold">
+                        {mySentLetters.length} lá thư
+                      </span>
+                    </h4>
+                    <p className="text-[11px] text-stone-500 dark:text-stone-400">
+                      Bảo mật riêng tư · Giữ mã niêm phong tự động (Chỉ riêng bạn mới thấy danh sách này)
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                {mySentLetters.map((myLetter) => {
+                  const hasReply = Boolean(myLetter.replyFromMel);
+                  const isSelected = lookedUpLetter?.id === myLetter.id;
+
+                  return (
+                    <div
+                      key={myLetter.id}
+                      className={`p-3.5 rounded-xl transition-all border ${
+                        isSelected
+                          ? 'bg-white dark:bg-stone-800 border-purple-500 shadow-md ring-2 ring-purple-400/30'
+                          : 'bg-white/85 dark:bg-stone-850/80 border-purple-100 dark:border-stone-700 hover:border-purple-300'
+                      } flex flex-col justify-between gap-2.5`}
+                    >
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-stone-100 dark:bg-stone-700 text-stone-600 dark:text-stone-300">
+                              {myLetter.tag}
+                            </span>
+                            <span
+                              className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${
+                                myLetter.type === 'private'
+                                  ? 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300'
+                                  : 'bg-pink-100 text-pink-700 dark:bg-pink-950 dark:text-pink-300'
+                              }`}
+                            >
+                              {myLetter.type === 'private' ? '🔒 Thư thầm kín' : '💌 Thư công khai'}
+                            </span>
+                          </div>
+                          <span className="text-[11px] font-mono text-stone-400">{myLetter.time}</span>
+                        </div>
+
+                        {myLetter.secretLookupCode && (
+                          <div className="flex items-center justify-between bg-purple-50/70 dark:bg-stone-900/80 px-2.5 py-1.5 rounded-lg border border-purple-100/80 dark:border-stone-700">
+                            <div className="flex items-center gap-1 text-[11px]">
+                              <span className="text-stone-500 dark:text-stone-400 font-sans">Mã niêm phong:</span>
+                              <span className="font-mono font-bold text-purple-700 dark:text-purple-300">
+                                {myLetter.secretLookupCode}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(myLetter.secretLookupCode!);
+                                setCopiedLetterId(myLetter.id);
+                                setTimeout(() => setCopiedLetterId(null), 2500);
+                              }}
+                              className="text-[10px] text-purple-600 hover:text-purple-800 dark:text-purple-400 flex items-center gap-0.5 font-sans font-medium px-1.5 py-0.5 rounded hover:bg-purple-100/50 cursor-pointer"
+                              title="Sao chép mã niêm phong"
+                            >
+                              {copiedLetterId === myLetter.id ? (
+                                <>
+                                  <Check className="w-3 h-3 text-emerald-500" />
+                                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Đã chép</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3 h-3" />
+                                  <span>Sao chép</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        )}
+
+                        <p className="text-xs text-stone-600 dark:text-stone-300 line-clamp-2 italic font-serif">
+                          "{myLetter.content.replace(/<[^>]*>?/gm, '').substring(0, 85)}..."
+                        </p>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1 border-t border-purple-50 dark:border-stone-700/60 text-xs">
+                        {hasReply ? (
+                          <span className="flex items-center gap-1 text-[11px] font-bold text-pink-600 dark:text-pink-400">
+                            <span className="w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
+                            <span>🌸 Mel đã hồi đáp!</span>
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-stone-400 dark:text-stone-500 flex items-center gap-1">
+                            <span>⏳</span>
+                            <span>Đang chờ hồi đáp...</span>
+                          </span>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setLookedUpLetter(myLetter);
+                            if (myLetter.secretLookupCode) {
+                              setLookupInputCode(myLetter.secretLookupCode);
+                            }
+                            const el = document.getElementById('reader-letter-lookup-box');
+                            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          }}
+                          className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer flex items-center gap-1 ${
+                            hasReply
+                              ? 'bg-pink-500 hover:bg-pink-600 text-white shadow-2xs'
+                              : 'bg-purple-100 hover:bg-purple-200 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300'
+                          }`}
+                        >
+                          <span>{hasReply ? 'Đọc hồi đáp ngay' : 'Xem lại thư'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* HỘP TRA CỨU THƯ THẦM KÍN DÀNH CHO ĐỘC GIẢ */}
           <div id="reader-letter-lookup-box" className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-purple-50/70 to-pink-50/70 dark:from-stone-800/80 dark:to-purple-950/30 border border-purple-200 dark:border-stone-700 space-y-3">
             <div className="flex items-center gap-2">
@@ -570,21 +814,53 @@ export const OtherSections: React.FC = () => {
             <p className="text-[11px] text-stone-500 dark:text-stone-400">
               Nhập mã niêm phong (ví dụ: <span className="font-mono font-semibold">MEL-12345</span>) bạn đã nhận khi gửi thư riêng tư để xem phản hồi từ Mel:
             </p>
-            <form onSubmit={handleLookupPrivateLetter} className="flex flex-col sm:flex-row gap-2">
-              <input
-                type="text"
-                value={lookupInputCode}
-                onChange={(e) => setLookupInputCode(e.target.value)}
-                placeholder="Nhập mã niêm phong thư (MEL-...)"
-                className="flex-1 px-3 py-2 rounded-xl bg-white dark:bg-stone-900 border border-purple-200 dark:border-stone-700 text-xs font-mono text-stone-800 dark:text-stone-100 focus:outline-hidden focus:ring-2 focus:ring-purple-400"
-              />
-              <button
-                type="submit"
-                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer shrink-0 shadow-2xs"
-              >
-                <Search className="w-3.5 h-3.5" />
-                <span>Tra cứu thư</span>
-              </button>
+            <form onSubmit={handleLookupPrivateLetter} className="space-y-2">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="text"
+                  value={lookupInputCode}
+                  onChange={(e) => setLookupInputCode(e.target.value)}
+                  placeholder="Nhập mã niêm phong thư (MEL-...)"
+                  className="flex-1 px-3 py-2 rounded-xl bg-white dark:bg-stone-900 border border-purple-200 dark:border-stone-700 text-xs font-mono text-stone-800 dark:text-stone-100 focus:outline-hidden focus:ring-2 focus:ring-purple-400"
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer shrink-0 shadow-2xs"
+                >
+                  <Search className="w-3.5 h-3.5" />
+                  <span>Tra cứu thư</span>
+                </button>
+              </div>
+
+              {/* Quick select chips from user's personal sent letters */}
+              {mySentLetters.some((l) => Boolean(l.secretLookupCode)) && (
+                <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                  <span className="text-[11px] text-stone-500 dark:text-stone-400 font-sans">
+                    Điền nhanh mã thư của bạn:
+                  </span>
+                  {mySentLetters
+                    .filter((l) => Boolean(l.secretLookupCode))
+                    .map((l) => (
+                      <button
+                        key={l.id}
+                        type="button"
+                        onClick={() => {
+                          setLookupInputCode(l.secretLookupCode!);
+                          setLookedUpLetter(l);
+                          setLookupError('');
+                        }}
+                        className={`text-[11px] font-mono px-2 py-0.5 rounded-md flex items-center gap-1 transition-colors cursor-pointer border ${
+                          lookupInputCode.toUpperCase() === l.secretLookupCode?.toUpperCase()
+                            ? 'bg-purple-600 text-white border-purple-600 shadow-2xs'
+                            : 'bg-purple-100 dark:bg-purple-950/60 hover:bg-purple-200 dark:hover:bg-purple-900 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800'
+                        }`}
+                      >
+                        <span>{l.secretLookupCode}</span>
+                        {l.replyFromMel && <span title="Đã có hồi đáp">🌸</span>}
+                      </button>
+                    ))}
+                </div>
+              )}
             </form>
 
             {lookupError && (

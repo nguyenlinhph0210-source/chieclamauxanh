@@ -20,11 +20,13 @@ import { useAuth } from '../lib/authContext';
 interface NotificationBellProps {
   onOpenAuthorModal?: (tab?: string) => void;
   onNavigateToStory?: (storyId: string, chapterNumber?: number) => void;
+  onNavigateToTab?: (tab: any) => void;
 }
 
 export const NotificationBell: React.FC<NotificationBellProps> = ({
   onOpenAuthorModal,
   onNavigateToStory,
+  onNavigateToTab,
 }) => {
   const { user, isAuthor, isCollaborator } = useAuth();
   const [notifications, setNotifications] = useState<AuthorNotificationItem[]>([]);
@@ -93,9 +95,9 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
       if (activeFilter === 'letter') return item.type === 'letter';
       if (activeFilter === 'chapter') return item.type === 'chapter' || item.type === 'story';
     } else {
-      // Normal Reader: Strictly no letters
+      if (activeFilter === 'personal') return item.type === 'reply' || item.type === 'letter_reply';
       if (activeFilter === 'chapter') return item.type === 'chapter' || item.type === 'story';
-      if (activeFilter === 'reply') return item.type === 'reply' || item.type === 'announcement';
+      if (activeFilter === 'announcement') return item.type === 'announcement';
     }
 
     return true;
@@ -105,7 +107,26 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
     markNotificationAsRead(item.id, currentUid);
     setIsOpen(false);
 
-    if (item.type === 'chapter' || item.type === 'story' || item.type === 'reply') {
+    if (item.type === 'letter_reply') {
+      if (onNavigateToTab) {
+        onNavigateToTab('other');
+      }
+      if (item.rawLetter) {
+        if (item.rawLetter.secretLookupCode) {
+          try {
+            localStorage.setItem('mel_active_lookup_code', item.rawLetter.secretLookupCode);
+          } catch {}
+        }
+        window.dispatchEvent(
+          new CustomEvent('open_reader_letter', {
+            detail: {
+              code: item.rawLetter.secretLookupCode,
+              letter: item.rawLetter,
+            },
+          })
+        );
+      }
+    } else if (item.type === 'chapter' || item.type === 'story' || item.type === 'reply') {
       if (onNavigateToStory && item.storyId) {
         onNavigateToStory(item.storyId, item.chapterNumber);
       }
@@ -126,6 +147,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
   const getBadgeEmoji = (type: string) => {
     switch (type) {
       case 'letter':
+      case 'letter_reply':
         return '💌';
       case 'comment':
         return '💬';
@@ -259,6 +281,18 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
               <>
                 <button
                   type="button"
+                  onClick={() => setActiveFilter('personal')}
+                  className={`px-2.5 py-1 rounded-lg font-medium flex items-center gap-1 transition-colors cursor-pointer shrink-0 ${
+                    activeFilter === 'personal'
+                      ? 'bg-pink-100 dark:bg-stone-800 text-pink-700 dark:text-pink-300 font-semibold'
+                      : 'text-stone-500 hover:text-stone-800 dark:text-stone-400'
+                  }`}
+                >
+                  <MessageSquare className="w-3 h-3" />
+                  <span>Phản hồi của tôi ({notifications.filter((n) => n.type === 'reply' || n.type === 'letter_reply').length})</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => setActiveFilter('chapter')}
                   className={`px-2.5 py-1 rounded-lg font-medium flex items-center gap-1 transition-colors cursor-pointer shrink-0 ${
                     activeFilter === 'chapter'
@@ -267,19 +301,19 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
                   }`}
                 >
                   <BookOpen className="w-3 h-3" />
-                  <span>Chương & Truyện mới</span>
+                  <span>Truyện & Chương</span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveFilter('reply')}
+                  onClick={() => setActiveFilter('announcement')}
                   className={`px-2.5 py-1 rounded-lg font-medium flex items-center gap-1 transition-colors cursor-pointer shrink-0 ${
-                    activeFilter === 'reply'
+                    activeFilter === 'announcement'
                       ? 'bg-pink-100 dark:bg-stone-800 text-pink-700 dark:text-pink-300 font-semibold'
                       : 'text-stone-500 hover:text-stone-800 dark:text-stone-400'
                   }`}
                 >
-                  <MessageSquare className="w-3 h-3" />
-                  <span>Phản hồi & Bảng tin</span>
+                  <Sparkles className="w-3 h-3" />
+                  <span>Bảng tin</span>
                 </button>
               </>
             )}

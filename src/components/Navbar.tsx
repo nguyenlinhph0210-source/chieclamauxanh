@@ -250,6 +250,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <NotificationBell
               onOpenAuthorModal={onOpenAuthorModal}
               onNavigateToStory={onNavigateToStory}
+              onNavigateToTab={onSelectTab}
             />
           )}
 
