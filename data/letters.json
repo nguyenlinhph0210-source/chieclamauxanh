@@ -1,1 +1,51 @@
-[]
+[
+  {
+    "id": "letter_1789816298265_awyp6",
+    "sender": "Linh Nguyễn",
+    "senderUid": "reader_1789816291239_tf9va",
+    "avatar": "💌",
+    "content": "nhaanhuhutroiwf ơi",
+    "type": "private",
+    "tag": "🌸 Lời chúc & Cảm ơn",
+    "time": "Vừa xong",
+    "createdAt": "2026-09-19T11:11:38.266Z",
+    "likes": 0,
+    "replyFromMel": "ngon r",
+    "repliedAt": "2026-09-19T11:11:58.329Z",
+    "repliedBy": "Lâm Ly Lục",
+    "secretLookupCode": "MEL-87148"
+  },
+  {
+    "id": "letter_1789814949901_tquoi",
+    "sender": "Lâm Ly Lục",
+    "senderEmail": "luclamly920@gmail.com",
+    "senderUid": "jMI76kLj55PM1CXXSjAxefROs3q1",
+    "avatar": "https://lh3.googleusercontent.com/a/ACg8ocIg7u131NOVmgjkUkwq4YlYN78u2HXvAEEHcyecy1rzgf5dvR0=s96-c",
+    "content": "Hees lu bà",
+    "type": "private",
+    "tag": "🌸 Lời chúc & Cảm ơn",
+    "time": "Vừa xong",
+    "createdAt": "2026-09-19T10:49:09.901Z",
+    "likes": 0,
+    "replyFromMel": "chòa bà nha",
+    "repliedAt": "2026-09-19T10:58:45.247Z",
+    "repliedBy": "Linh Nguyễn",
+    "secretLookupCode": "MEL-78402"
+  },
+  {
+    "id": "letter_1789814937434_uv0t3",
+    "sender": "Lâm Ly Lục",
+    "senderEmail": "luclamly920@gmail.com",
+    "senderUid": "jMI76kLj55PM1CXXSjAxefROs3q1",
+    "avatar": "https://lh3.googleusercontent.com/a/ACg8ocIg7u131NOVmgjkUkwq4YlYN78u2HXvAEEHcyecy1rzgf5dvR0=s96-c",
+    "content": "Chòa mí bà nha",
+    "type": "public",
+    "tag": "🌸 Lời chúc & Cảm ơn",
+    "time": "Vừa xong",
+    "createdAt": "2026-09-19T10:48:57.434Z",
+    "likes": 0,
+    "replyFromMel": "<h3><b>ô ki bà</b></h3>",
+    "repliedAt": "2026-09-19T10:55:14.955Z",
+    "repliedBy": "Lâm Ly Lục"
+  }
+]
