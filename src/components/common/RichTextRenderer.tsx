@@ -28,17 +28,36 @@ export function stripRichText(text?: string | null): string {
 }
 
 /**
- * Sanitizes arbitrary HTML to prevent malicious XSS while keeping styling tags.
+ * Sanitizes arbitrary HTML to prevent malicious XSS and cleans out
+ * intrusive copied DevTools / browser inspector styles that break reader customization.
  */
 function sanitizeHtml(html: string): string {
   if (!html) return '';
-  return html
+  let s = html
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
     .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
     .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '')
     .replace(/<embed\b[^<]*(?:(?!<\/embed>)<[^<]*)*<\/embed>/gi, '')
     .replace(/on\w+\s*=\s*(['"]).*?\1/gi, '')
     .replace(/javascript\s*:/gi, '');
+
+  // Strip devtools / angular / web clipper attributes
+  s = s.replace(/\s*_ngcontent-[a-zA-Z0-9_-]+="[^"]*"/g, '');
+  s = s.replace(/\s*inline-copy-host(?:=""|)/g, '');
+  s = s.replace(/\s*aria-busy="[^"]*"/g, '');
+  s = s.replace(/\s*aria-live="[^"]*"/g, '');
+  s = s.replace(/\s*dir="ltr"/g, '');
+  s = s.replace(/\s*data-path-to-node="[^"]*"/g, '');
+  s = s.replace(/\s*id="model-response-[^"]*"/g, '');
+  s = s.replace(/\s*class="[^"]*markdown-main-panel[^"]*"/g, '');
+
+  // Strip intrusive inline styles (e.g. line-height: 1.15, hardcoded color, font-family)
+  // so reader themes, font choices, and line-height toggles can work freely.
+  s = s.replace(/\s*style="[^"]*(?:animation|line-height|color:\s*rgb|font-family|fill:)[^"]*"/gi, '');
+  s = s.replace(/\s*style="background-color:\s*rgba\(0,\s*0,\s*0,\s*0\);?"/gi, '');
+  s = s.replace(/\s*style=""/gi, '');
+
+  return s;
 }
 
 /**
@@ -75,36 +94,36 @@ export function formatRichTextToHtml(raw?: string | null, indentParagraphs = fal
   });
   // Blockquote
   text = text.replace(/\[quote\]([\s\S]*?)\[\/quote\]/gi, (_, inner) => {
-    return `<blockquote class="my-3 pl-4 sm:pl-5 py-2 border-l-3 border-pink-400 dark:border-pink-500 bg-pink-50/40 dark:bg-stone-850/40 rounded-r-xl italic font-serif text-stone-700 dark:text-stone-300 text-sm sm:text-base leading-relaxed">${inner.trim().replace(/\n/g, '<br/>')}</blockquote>`;
+    return `<blockquote class="my-3 pl-4 sm:pl-5 py-2 border-l-3 border-pink-400 rounded-r-xl italic text-sm sm:text-base">${inner.trim().replace(/\n/g, '<br/>')}</blockquote>`;
   });
   // Headings
   text = text.replace(/\[(?:h[1-3]|heading)\]([\s\S]*?)\[\/(?:h[1-3]|heading)\]/gi, (_, inner) => {
-    return `<h3 class="font-serif font-bold text-base sm:text-lg text-stone-900 dark:text-stone-100 my-3 pb-1 border-b border-pink-100 dark:border-stone-800">${inner.trim()}</h3>`;
+    return `<h3 class="font-bold text-base sm:text-lg text-inherit my-3 pb-1 border-b border-current/20">${inner.trim()}</h3>`;
   });
 
   // Markdown block headings
-  text = text.replace(/^### (.*$)/gim, '<h3 class="font-serif font-bold text-base sm:text-lg text-stone-900 dark:text-stone-100 my-3 pb-1 border-b border-pink-100 dark:border-stone-800">$1</h3>');
-  text = text.replace(/^## (.*$)/gim, '<h2 class="font-serif font-bold text-lg sm:text-xl text-stone-900 dark:text-stone-100 my-3.5 pb-1.5 border-b border-pink-100 dark:border-stone-800">$1</h2>');
-  text = text.replace(/^# (.*$)/gim, '<h1 class="font-serif font-bold text-xl sm:text-2xl text-stone-900 dark:text-stone-100 my-4 pb-2 border-b border-pink-200 dark:border-stone-800">$1</h1>');
-  text = text.replace(/^> (.*$)/gim, '<blockquote class="my-3 pl-4 sm:pl-5 py-2 border-l-3 border-pink-400 dark:border-pink-500 bg-pink-50/40 dark:bg-stone-850/40 rounded-r-xl italic font-serif text-stone-700 dark:text-stone-300 text-sm sm:text-base leading-relaxed">$1</blockquote>');
+  text = text.replace(/^### (.*$)/gim, '<h3 class="font-bold text-base sm:text-lg text-inherit my-3 pb-1 border-b border-current/20">$1</h3>');
+  text = text.replace(/^## (.*$)/gim, '<h2 class="font-bold text-lg sm:text-xl text-inherit my-3.5 pb-1.5 border-b border-current/20">$1</h2>');
+  text = text.replace(/^# (.*$)/gim, '<h1 class="font-bold text-xl sm:text-2xl text-inherit my-4 pb-2 border-b border-current/20">$1</h1>');
+  text = text.replace(/^> (.*$)/gim, '<blockquote class="my-3 pl-4 sm:pl-5 py-2 border-l-3 border-pink-400 rounded-r-xl italic text-sm sm:text-base">$1</blockquote>');
 
   // 3. Inline formatting
   // Bold + Italic: ***text***
   text = text.replace(/\*\*\*([^*]+?)\*\*\*/g, '<strong><em>$1</em></strong>');
   // Bold: **text** or [b]text[/b]
-  text = text.replace(/\*\*([^*]+?)\*\*/g, '<strong class="font-bold text-stone-900 dark:text-stone-100">$1</strong>');
-  text = text.replace(/\[b\]([\s\S]+?)\[\/b\]/gi, '<strong class="font-bold text-stone-900 dark:text-stone-100">$1</strong>');
+  text = text.replace(/\*\*([^*]+?)\*\*/g, '<strong class="font-bold text-inherit">$1</strong>');
+  text = text.replace(/\[b\]([\s\S]+?)\[\/b\]/gi, '<strong class="font-bold text-inherit">$1</strong>');
   // Italic: *text* or [i]text[/i]
   text = text.replace(/(?<!\*)\*([^*\n]+?)\*(?!\*)/g, '<em class="italic">$1</em>');
   text = text.replace(/\[i\]([\s\S]+?)\[\/i\]/gi, '<em class="italic">$1</em>');
   // Underline: [u]text[/u]
   text = text.replace(/\[u\]([\s\S]+?)\[\/u\]/gi, '<u class="underline underline-offset-3 decoration-pink-400">$1</u>');
   // Strikethrough: ~~text~~ or [s]text[/s]
-  text = text.replace(/~~([^~]+?)~~/g, '<del class="line-through text-stone-400 dark:text-stone-500">$1</del>');
-  text = text.replace(/\[s\]([\s\S]+?)\[\/s\]/gi, '<del class="line-through text-stone-400 dark:text-stone-500">$1</del>');
+  text = text.replace(/~~([^~]+?)~~/g, '<del class="line-through opacity-60">$1</del>');
+  text = text.replace(/\[s\]([\s\S]+?)\[\/s\]/gi, '<del class="line-through opacity-60">$1</del>');
   // Highlight: ==text== or [mark]text[/mark]
-  text = text.replace(/==([^=]+?)==/g, '<mark class="bg-pink-100 dark:bg-pink-950/60 text-pink-900 dark:text-pink-200 px-1 rounded-sm">$1</mark>');
-  text = text.replace(/\[mark\]([\s\S]+?)\[\/mark\]/gi, '<mark class="bg-pink-100 dark:bg-pink-950/60 text-pink-900 dark:text-pink-200 px-1 rounded-sm">$1</mark>');
+  text = text.replace(/==([^=]+?)==/g, '<mark class="bg-pink-100 dark:bg-pink-950/60 text-inherit px-1 rounded-sm">$1</mark>');
+  text = text.replace(/\[mark\]([\s\S]+?)\[\/mark\]/gi, '<mark class="bg-pink-100 dark:bg-pink-950/60 text-inherit px-1 rounded-sm">$1</mark>');
 
   // 4. Clean up any remaining/unclosed stray BBCode tags so they NEVER leak as raw text!
   text = text.replace(/\[\/?(?:center|right|left|justify|indent|quote|heading|h[1-6]|b|i|u|s|mark)\]/gi, '');
@@ -114,7 +133,6 @@ export function formatRichTextToHtml(raw?: string | null, indentParagraphs = fal
   const hasHtmlBlocks = /^<(?:p|div|blockquote|h[1-6]|ul|ol|table)[\s>]/i.test(text.trim());
 
   if (hasHtmlBlocks) {
-    // Replace bare newlines between blocks or inside simple blocks
     return text;
   }
 
@@ -130,10 +148,10 @@ export function formatRichTextToHtml(raw?: string | null, indentParagraphs = fal
     }
 
     // Normal paragraph:
-    // IMPORTANT: indentParagraphs defaults to false. If false, indent-0 (NO automatic indent).
+    // Do NOT lock line-height here so reader line-height toggle controls it!
     const indentClass = indentParagraphs ? 'indent-6 sm:indent-8' : 'indent-0';
     const withBr = trimmed.replace(/\n/g, '<br/>');
-    return `<p class="${indentClass} my-3 sm:my-4 leading-relaxed sm:leading-[1.85]">${withBr}</p>`;
+    return `<p class="${indentClass} my-3 sm:my-4">${withBr}</p>`;
   });
 
   return formattedBlocks.filter(Boolean).join('\n');

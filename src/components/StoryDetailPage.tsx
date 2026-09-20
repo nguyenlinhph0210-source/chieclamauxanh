@@ -290,13 +290,47 @@ export const StoryDetailPage: React.FC<StoryDetailPageProps> = ({ stories }) => 
     );
   }
 
+  // Robust chapter finder avoiding erratic fallback to chapter 1
+  const resolveChapter = (list: Chapter[], targetKey?: string): Chapter | null => {
+    if (!targetKey || !list || list.length === 0) return null;
+    const cleanKey = String(targetKey).trim();
+    const num = Number(cleanKey);
+
+    // 1. Match by numeric chapterNumber
+    if (!isNaN(num)) {
+      const byNum = list.find((c) => c.chapterNumber === num);
+      if (byNum) return byNum;
+    }
+
+    // 2. Match by exact chapter id
+    const byId = list.find((c) => c.id === cleanKey);
+    if (byId) return byId;
+
+    // 3. Match by ID suffix or slug (e.g. "-c15" or "-15")
+    const bySuffix = list.find(
+      (c) => c.id.endsWith(`-${cleanKey}`) || c.id.endsWith(cleanKey) || c.id.includes(`-c${cleanKey}`)
+    );
+    if (bySuffix) return bySuffix;
+
+    // 4. Match extra chapter (e.g. "extra-1" or if cleanKey has digits)
+    const digitsOnly = cleanKey.replace(/\D/g, '');
+    if (digitsOnly) {
+      const extraNum = Number(digitsOnly);
+      const byExtra = list.find(
+        (c) => (c.isExtra || c.partType === 'extra') && (c.extraNumber === extraNum || c.chapterNumber === extraNum)
+      );
+      if (byExtra) return byExtra;
+    }
+
+    return null;
+  };
+
   // 3. Reading a specific chapter route: /bai-viet/:id/chuong/:chapterNumber
   if (chapterNumber !== undefined) {
-    const targetChapterNum = Number(chapterNumber);
-    const chapter = chapters.find((c) => c.chapterNumber === targetChapterNum) || chapters[0];
+    const matchedChapter = resolveChapter(chapters, chapterNumber);
 
-    if (!chapter) {
-      if (isLoadingChapters) {
+    if (!matchedChapter) {
+      if (isLoadingChapters || chapters.length === 0) {
         return (
           <div className="max-w-md mx-auto py-24 px-4 text-center space-y-4">
             <div className="w-10 h-10 mx-auto border-3 border-pink-400 border-t-transparent rounded-full animate-spin" />
@@ -308,15 +342,26 @@ export const StoryDetailPage: React.FC<StoryDetailPageProps> = ({ stories }) => 
       return (
         <div className="max-w-xl mx-auto py-16 px-4 text-center space-y-4">
           <p className="text-stone-600 dark:text-stone-300 font-serif">
-            Chưa tìm thấy chương {chapterNumber} của truyện <strong>{resolvedStory.title}</strong>.
+            Chưa tìm thấy chương <strong>{chapterNumber}</strong> của truyện <strong>{resolvedStory.title}</strong>.
           </p>
-          <Link
-            to={`/bai-viet/${resolvedStory.id}`}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-pink-500 text-white text-sm font-medium"
-          >
-            <BookOpen className="w-4 h-4" />
-            <span>Về mục lục truyện</span>
-          </Link>
+          <div className="flex items-center justify-center gap-3">
+            <Link
+              to={`/bai-viet/${resolvedStory.id}`}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-pink-500 text-white text-sm font-medium"
+            >
+              <BookOpen className="w-4 h-4" />
+              <span>Về mục lục truyện</span>
+            </Link>
+            {chapters.length > 0 && (
+              <button
+                type="button"
+                onClick={() => navigate(`/bai-viet/${resolvedStory.id}/chuong/${chapters[0].chapterNumber}`)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-200 text-sm font-medium cursor-pointer"
+              >
+                <span>Đọc từ chương 1</span>
+              </button>
+            )}
+          </div>
         </div>
       );
     }
@@ -324,7 +369,7 @@ export const StoryDetailPage: React.FC<StoryDetailPageProps> = ({ stories }) => 
     return (
       <ReaderView
         story={resolvedStory}
-        chapter={chapter}
+        chapter={matchedChapter}
         allChapters={chapters}
         onBack={() => navigate(`/bai-viet/${resolvedStory.id}`)}
         onSelectChapter={(num) => navigate(`/bai-viet/${resolvedStory.id}/chuong/${num}`)}

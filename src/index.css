@@ -4,6 +4,8 @@
 @custom-variant dark (.dark &, &.dark, [data-theme="dark"] &, &[data-theme="dark"]);
 
 @theme {
+  --font-serif: 'Lora', 'Playfair Display', Georgia, serif;
+  --font-sans: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
   --color-stone-750: #36322d;
   --color-stone-850: #211e1b;
 }
@@ -23,6 +25,90 @@
   h1, h2, h3, h4, h5, h6, .font-serif {
     font-family: var(--font-serif);
   }
+}
+
+/* =========================================================================
+   READER VIEW ENHANCEMENTS: Font Family, Line Height & Dark Theme Contrast
+   ========================================================================= */
+
+/* Font Family Enforcement */
+[data-font-family="serif"],
+[data-font-family="serif"] *,
+.reader-font-serif,
+.reader-font-serif * {
+  font-family: 'Lora', 'Playfair Display', Georgia, serif !important;
+}
+
+[data-font-family="sans"],
+[data-font-family="sans"] *,
+.reader-font-sans,
+.reader-font-sans * {
+  font-family: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif !important;
+}
+
+/* Line Height Enforcement */
+[data-line-height="loose"],
+[data-line-height="loose"] p,
+[data-line-height="loose"] div,
+[data-line-height="loose"] span,
+[data-line-height="loose"] .rich-text-content,
+[data-line-height="loose"] .rich-text-content * {
+  line-height: 2.2 !important;
+}
+
+[data-line-height="relaxed"],
+[data-line-height="relaxed"] p,
+[data-line-height="relaxed"] div,
+[data-line-height="relaxed"] span,
+[data-line-height="relaxed"] .rich-text-content,
+[data-line-height="relaxed"] .rich-text-content * {
+  line-height: 1.8 !important;
+}
+
+/* Base Prose & Rich Text Reset */
+.rich-text-content {
+  font-size: inherit;
+  font-family: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+
+.rich-text-content p,
+.rich-text-content div {
+  margin-top: 0.85rem;
+  margin-bottom: 0.85rem;
+  word-break: break-word;
+}
+
+/* Reader Dark Theme ("Đêm đen sao trời") - Target only reading prose content to avoid overriding UI controls */
+[data-reader-theme="dark"] .reader-prose,
+[data-reader-theme="dark"] .reader-prose .rich-text-content,
+[data-reader-theme="dark"] .reader-prose .rich-text-content p,
+[data-reader-theme="dark"] .reader-prose .rich-text-content span,
+[data-reader-theme="dark"] .reader-prose .rich-text-content div,
+[data-reader-theme="dark"] .reader-prose .rich-text-content em,
+[data-reader-theme="dark"] .reader-prose .rich-text-content u,
+[data-reader-theme="dark"] .reader-prose .rich-text-content strong,
+[data-reader-theme="dark"] .reader-prose .rich-text-content h1,
+[data-reader-theme="dark"] .reader-prose .rich-text-content h2,
+[data-reader-theme="dark"] .reader-prose .rich-text-content h3 {
+  color: #e4e4e7 !important;
+}
+
+[data-reader-theme="dark"] .rich-text-content blockquote {
+  background-color: rgba(244, 114, 182, 0.1) !important;
+  border-left-color: #f472b6 !important;
+  color: #d4d4d8 !important;
+}
+
+[data-reader-theme="dark"] .rich-text-content mark {
+  background-color: rgba(244, 114, 182, 0.25) !important;
+  color: #fbcfe8 !important;
+}
+
+/* Ensure theme preview labels on the settings bar retain their high-contrast, crystal-clear colors */
+.theme-pill-label {
+  color: inherit !important;
 }
 
 @keyframes shake {

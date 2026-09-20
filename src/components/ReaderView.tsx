@@ -76,85 +76,127 @@ export const READER_THEMES: Record<ReaderThemeKey, ReaderThemeConfig> = {
     name: 'Trắng ngà',
     desc: 'Tự nhiên & sắc nét',
     bgHex: '#fffaf5',
-    cardBg: 'bg-white dark:bg-stone-900',
-    cardBorder: 'border-pink-100/90 dark:border-stone-800',
-    textColor: 'text-stone-800 dark:text-stone-100',
-    subtextColor: 'text-stone-500 dark:text-stone-400',
-    accentColor: 'text-pink-600 dark:text-pink-400',
-    dividerColor: 'border-pink-100 dark:border-stone-800',
-    navBg: 'bg-white/95 dark:bg-stone-900/95',
-    navBorder: 'border-pink-100 dark:border-stone-700',
-    secondaryBtnBg: 'bg-stone-100 hover:bg-pink-50 dark:bg-stone-800 dark:hover:bg-stone-700',
-    noteBg: 'bg-amber-50/80 dark:bg-stone-800/80',
-    noteBorder: 'border-amber-200/70 dark:border-stone-700',
+    cardBg: 'bg-white',
+    cardBorder: 'border-pink-100/90',
+    textColor: 'text-stone-800',
+    subtextColor: 'text-stone-500',
+    accentColor: 'text-pink-600',
+    dividerColor: 'border-pink-100',
+    navBg: 'bg-white/95',
+    navBorder: 'border-pink-100',
+    secondaryBtnBg: 'bg-stone-100 hover:bg-pink-50',
+    noteBg: 'bg-amber-50/80',
+    noteBorder: 'border-amber-200/70',
   },
   sepia: {
     id: 'sepia',
     name: 'Vàng dịu mắt',
     desc: 'Lọc ánh sáng xanh, chống lóa',
     bgHex: '#fbf0d9',
-    cardBg: 'bg-[#fcf4e4] dark:bg-[#2b241c]',
-    cardBorder: 'border-[#ebd7b0] dark:border-[#423628]',
-    textColor: 'text-[#3c2f1d] dark:text-[#f2e7d5]',
-    subtextColor: 'text-[#7e6443] dark:text-[#bda88e]',
-    accentColor: 'text-[#b45309] dark:text-[#f59e0b]',
-    dividerColor: 'border-[#ecd9b5] dark:border-[#423628]',
-    navBg: 'bg-[#fcf4e4]/95 dark:bg-[#2b241c]/95',
-    navBorder: 'border-[#ebd7b0] dark:border-[#423628]',
-    secondaryBtnBg: 'bg-[#f3e5c8] hover:bg-[#ead6b1] dark:bg-[#382e22] dark:hover:bg-[#4a3d2e]',
-    noteBg: 'bg-[#f4e6c9]/80 dark:bg-[#382e22]/80',
-    noteBorder: 'border-[#dec59b] dark:border-[#52412e]',
+    cardBg: 'bg-[#fcf4e4]',
+    cardBorder: 'border-[#ebd7b0]',
+    textColor: 'text-[#3c2f1d]',
+    subtextColor: 'text-[#7e6443]',
+    accentColor: 'text-[#b45309]',
+    dividerColor: 'border-[#ecd9b5]',
+    navBg: 'bg-[#fcf4e4]/95',
+    navBorder: 'border-[#ebd7b0]',
+    secondaryBtnBg: 'bg-[#f3e5c8] hover:bg-[#ead6b1]',
+    noteBg: 'bg-[#f4e6c9]/80',
+    noteBorder: 'border-[#dec59b]',
   },
   matcha: {
     id: 'matcha',
     name: 'Xanh trà dưỡng mắt',
     desc: 'Thư giãn cơ mi, giảm mỏi mắt',
     bgHex: '#eef6ee',
-    cardBg: 'bg-[#f3f9f3] dark:bg-[#1a291e]',
-    cardBorder: 'border-[#cfe5d1] dark:border-[#2b4231]',
-    textColor: 'text-[#193520] dark:text-[#e4f3e6]',
-    subtextColor: 'text-[#446e4d] dark:text-[#9bc2a3]',
-    accentColor: 'text-[#15803d] dark:text-[#4ade80]',
-    dividerColor: 'border-[#d7ead9] dark:border-[#2b4231]',
-    navBg: 'bg-[#f3f9f3]/95 dark:bg-[#1a291e]/95',
-    navBorder: 'border-[#cfe5d1] dark:border-[#2b4231]',
-    secondaryBtnBg: 'bg-[#e0f0e2] hover:bg-[#d0e7d3] dark:bg-[#25392b] dark:hover:bg-[#314a38]',
-    noteBg: 'bg-[#e4f2e5]/80 dark:bg-[#233829]/80',
-    noteBorder: 'border-[#bcdabc] dark:border-[#38533e]',
+    cardBg: 'bg-[#f3f9f3]',
+    cardBorder: 'border-[#cfe5d1]',
+    textColor: 'text-[#193520]',
+    subtextColor: 'text-[#446e4d]',
+    accentColor: 'text-[#15803d]',
+    dividerColor: 'border-[#d7ead9]',
+    navBg: 'bg-[#f3f9f3]/95',
+    navBorder: 'border-[#cfe5d1]',
+    secondaryBtnBg: 'bg-[#e0f0e2] hover:bg-[#d0e7d3]',
+    noteBg: 'bg-[#e4f2e5]/80',
+    noteBorder: 'border-[#bcdabc]',
   },
   mocha: {
     id: 'mocha',
     name: 'Cà phê ấm',
     desc: 'Êm đềm, tương phản dịu',
     bgHex: '#f3ece2',
-    cardBg: 'bg-[#f7f2ea] dark:bg-[#26211d]',
-    cardBorder: 'border-[#ded1bf] dark:border-[#3d342d]',
-    textColor: 'text-[#38291e] dark:text-[#eee4db]',
-    subtextColor: 'text-[#786150] dark:text-[#b49e8d]',
-    accentColor: 'text-[#9a3412] dark:text-[#fb923c]',
-    dividerColor: 'border-[#e4d8c8] dark:border-[#3d342d]',
-    navBg: 'bg-[#f7f2ea]/95 dark:bg-[#26211d]/95',
-    navBorder: 'border-[#ded1bf] dark:border-[#3d342d]',
-    secondaryBtnBg: 'bg-[#ebdccb] hover:bg-[#dfcdb9] dark:bg-[#362e28] dark:hover:bg-[#483d35]',
-    noteBg: 'bg-[#ede0cf]/80 dark:bg-[#362e28]/80',
-    noteBorder: 'border-[#d5beaa] dark:border-[#4d4037]',
+    cardBg: 'bg-[#f7f2ea]',
+    cardBorder: 'border-[#ded1bf]',
+    textColor: 'text-[#38291e]',
+    subtextColor: 'text-[#786150]',
+    accentColor: 'text-[#9a3412]',
+    dividerColor: 'border-[#e4d8c8]',
+    navBg: 'bg-[#f7f2ea]/95',
+    navBorder: 'border-[#ded1bf]',
+    secondaryBtnBg: 'bg-[#ebdccb] hover:bg-[#dfcdb9]',
+    noteBg: 'bg-[#ede0cf]/80',
+    noteBorder: 'border-[#d5beaa]',
   },
   dark: {
     id: 'dark',
     name: 'Đêm đen sao trời',
     desc: 'Dành cho đọc trong bóng tối',
     bgHex: '#141416',
-    cardBg: 'bg-[#1a1a1e] dark:bg-[#141416]',
-    cardBorder: 'border-[#2d2d34] dark:border-[#26262b]',
-    textColor: 'text-[#e4e4e7] dark:text-[#e4e4e7]',
-    subtextColor: 'text-[#a1a1aa] dark:text-[#9ca3af]',
-    accentColor: 'text-pink-400 dark:text-pink-400',
-    dividerColor: 'border-[#2d2d34] dark:border-[#26262b]',
-    navBg: 'bg-[#1a1a1e]/95 dark:bg-[#141416]/95',
-    navBorder: 'border-[#2d2d34] dark:border-[#26262b]',
-    secondaryBtnBg: 'bg-[#27272e] hover:bg-[#34343d] dark:bg-[#202024] dark:hover:bg-[#2d2d33]',
-    noteBg: 'bg-[#25252b]/80 dark:bg-[#202024]/80',
-    noteBorder: 'border-[#3f3f4a] dark:border-[#35353d]',
+    cardBg: 'bg-[#1b1b22]',
+    cardBorder: 'border-[#2d2d38]',
+    textColor: 'text-[#e4e4e7]',
+    subtextColor: 'text-[#9ca3af]',
+    accentColor: 'text-pink-400',
+    dividerColor: 'border-[#2d2d38]',
+    navBg: 'bg-[#1b1b22]/95',
+    navBorder: 'border-[#2d2d38]',
+    secondaryBtnBg: 'bg-[#262632] hover:bg-[#323242]',
+    noteBg: 'bg-[#23232e]/85',
+    noteBorder: 'border-[#383848]',
+  },
+};
+
+/** Dedicated high-contrast styling for the theme preview pills on the settings toolbar */
+const THEME_BUTTON_STYLES: Record<
+  ReaderThemeKey,
+  {
+    textColor: string;
+    borderColor: string;
+    circleBorder: string;
+    checkColor: string;
+  }
+> = {
+  default: {
+    textColor: '#1c1917',
+    borderColor: '#e7e5e4',
+    circleBorder: 'rgba(0, 0, 0, 0.25)',
+    checkColor: 'text-pink-600',
+  },
+  sepia: {
+    textColor: '#3c2f1d',
+    borderColor: '#ebd7b0',
+    circleBorder: 'rgba(60, 47, 29, 0.3)',
+    checkColor: 'text-amber-700',
+  },
+  matcha: {
+    textColor: '#193520',
+    borderColor: '#cfe5d1',
+    circleBorder: 'rgba(25, 53, 32, 0.3)',
+    checkColor: 'text-emerald-700',
+  },
+  mocha: {
+    textColor: '#38291e',
+    borderColor: '#ded1bf',
+    circleBorder: 'rgba(56, 41, 30, 0.3)',
+    checkColor: 'text-amber-800',
+  },
+  dark: {
+    textColor: '#f4f4f5',
+    borderColor: '#383848',
+    circleBorder: 'rgba(255, 255, 255, 0.35)',
+    checkColor: 'text-pink-400',
   },
 };
 
@@ -207,7 +249,21 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   const [showScrollTop, setShowScrollTop] = useState(false);
 
   // Chapter unlock & interaction state
-  const [unlockedChapters, setUnlockedChapters] = useState<Record<string, boolean>>({});
+  const [unlockedChapters, setUnlockedChapters] = useState<Record<string, boolean>>(() => {
+    try {
+      const raw = localStorage.getItem('better_unlocked_chapters');
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('better_unlocked_chapters', JSON.stringify(unlockedChapters));
+    } catch {}
+  }, [unlockedChapters]);
+
   const [inputPass, setInputPass] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [hasLiked, setHasLiked] = useState(() => {
@@ -371,48 +427,92 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Keyboard navigation: Left/Right arrow keys for previous/next chapter, Esc to close TOC
+  // Sorted list of all chapters by book order
+  const sortedChapters = useMemo(() => {
+    return [...safeAllChapters].sort((a, b) => {
+      const aNum = typeof a.chapterNumber === 'number' ? a.chapterNumber : 0;
+      const bNum = typeof b.chapterNumber === 'number' ? b.chapterNumber : 0;
+      if (aNum !== bNum) return aNum - bNum;
+      return a.id.localeCompare(b.id);
+    });
+  }, [safeAllChapters]);
+
+  const currentIndex = useMemo(() => {
+    return sortedChapters.findIndex(
+      (c) => c.id === chapter.id || c.chapterNumber === chapter.chapterNumber
+    );
+  }, [sortedChapters, chapter.id, chapter.chapterNumber]);
+
+  const prevChapter = currentIndex > 0 ? sortedChapters[currentIndex - 1] : null;
+  const nextChapter = currentIndex >= 0 && currentIndex < sortedChapters.length - 1 ? sortedChapters[currentIndex + 1] : null;
+
+  // Keyboard navigation: Esc to close menus, Alt+Left / Alt+Right for previous/next chapter
+  // (Using altKey prevents accidental chapter jumps during normal reading / scrolling)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) {
+      if (
+        ['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName) ||
+        (e.target as HTMLElement)?.isContentEditable
+      ) {
         return;
       }
 
       if (e.key === 'Escape') {
         setIsTocOpen(false);
         setIsSettingsOpen(false);
-      } else if (e.key === 'ArrowLeft') {
-        const prev = safeAllChapters.find((c) => c.chapterNumber === chapter.chapterNumber - 1);
-        if (prev) {
-          onSelectChapter(prev.chapterNumber);
+      } else if (e.altKey && e.key === 'ArrowLeft') {
+        if (prevChapter) {
+          onSelectChapter(prevChapter.chapterNumber);
         }
-      } else if (e.key === 'ArrowRight') {
-        const next = safeAllChapters.find((c) => c.chapterNumber === chapter.chapterNumber + 1);
-        if (next) {
-          onSelectChapter(next.chapterNumber);
+      } else if (e.altKey && e.key === 'ArrowRight') {
+        if (nextChapter) {
+          onSelectChapter(nextChapter.chapterNumber);
         }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [chapter.chapterNumber, safeAllChapters, onSelectChapter]);
+  }, [prevChapter, nextChapter, onSelectChapter]);
 
-  const isUnlocked = !chapter.isLocked || unlockedChapters[chapter.id];
+  const isUnlocked = !chapter.isLocked || Boolean(unlockedChapters[chapter.id]) || Boolean(isAuthor || isMainAuthor || isCollaborator);
+
+  const normalizePass = (str: string = ''): string => {
+    return str
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[đĐ]/g, 'd')
+      .replace(/[^a-z0-9]/g, '');
+  };
 
   const handleUnlock = (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanInput = inputPass.trim().toLowerCase();
-    const chapterKey = (chapter.passwordKey || '').trim().toLowerCase();
-    const storyKey = (story.passwordKey || '').trim().toLowerCase();
-    const cleanKey = chapterKey || storyKey;
+    const rawInput = inputPass.trim();
+    if (!rawInput) {
+      setErrorMsg('Vui lòng nhập mật khẩu mở khóa chương nhé ~');
+      return;
+    }
+    const cleanInput = rawInput.toLowerCase();
+    const normalizedInput = normalizePass(rawInput);
 
-    if (
-      (cleanKey && cleanInput === cleanKey) ||
+    const chapterKey = (chapter.passwordKey || '').trim();
+    const storyKey = (story.passwordKey || '').trim();
+    const targetKey = chapterKey || storyKey;
+
+    const normalizedTarget = normalizePass(targetKey);
+    const lowerTarget = targetKey.toLowerCase();
+
+    const isMatch =
+      (targetKey && (cleanInput === lowerTarget || normalizedInput === normalizedTarget)) ||
+      normalizedInput === 'mellifluous' ||
+      normalizedInput === 'chuyen' ||
+      normalizedInput === '5cms' ||
       cleanInput === 'mellifluous' ||
       cleanInput === 'chuyen' ||
-      cleanInput === '5cms'
-    ) {
+      cleanInput === '5cms';
+
+    if (isMatch) {
       setUnlockedChapters((prev) => ({ ...prev, [chapter.id]: true }));
       setErrorMsg('');
       setInputPass('');
@@ -536,14 +636,10 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Chapter navigation helpers
-  const prevChapter = safeAllChapters.find((c) => c.chapterNumber === chapter.chapterNumber - 1);
-  const nextChapter = safeAllChapters.find((c) => c.chapterNumber === chapter.chapterNumber + 1);
-
   const mainChaptersCount = safeAllChapters.filter((c) => !c.isExtra && c.partType !== 'extra').length;
   const extraChaptersCount = safeAllChapters.filter((c) => c.isExtra || c.partType === 'extra').length;
 
-  // Filtered & sorted TOC chapters
+  // Filtered & sorted TOC chapters for the TOC Drawer
   const filteredChapters = safeAllChapters.filter((c) => {
     const isExtra = Boolean(c.isExtra || c.partType === 'extra');
     if (tocTab === 'main' && isExtra) return false;
@@ -558,7 +654,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     );
   });
 
-  const sortedChapters = [...filteredChapters].sort((a, b) => {
+  const sortedTocChapters = [...filteredChapters].sort((a, b) => {
     return tocSortAsc ? a.chapterNumber - b.chapterNumber : b.chapterNumber - a.chapterNumber;
   });
 
@@ -595,6 +691,9 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   return (
     <article
       id="novel-reader-view"
+      data-reader-theme={themeKey}
+      data-font-family={fontFamily}
+      data-line-height={lineHeight}
       className={`w-full mx-auto pb-24 transition-colors duration-300 overflow-x-hidden ${
         readerWidth === 'wide' ? 'max-w-5xl' : 'max-w-4xl'
       }`}
@@ -734,7 +833,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
               aria-label="Cài đặt bảo vệ mắt"
               className={`w-full max-h-[75vh] overflow-y-auto p-3.5 sm:p-5 rounded-2xl border shadow-xl space-y-3.5 sm:space-y-4 animate-in fade-in slide-in-from-top-2 duration-200 transition-colors ${currentTheme.cardBg} ${currentTheme.cardBorder}`}
             >
-              <div className="flex items-center justify-between border-b pb-2.5" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
+              <div className={`flex items-center justify-between border-b pb-2.5 ${currentTheme.dividerColor}`}>
                 <div className="flex items-center gap-2">
                   <Eye className="w-4 h-4 text-pink-500 shrink-0" />
                   <h3 className={`font-serif text-xs sm:text-sm font-bold ${currentTheme.textColor}`}>
@@ -757,7 +856,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
                   <span className={`font-medium ${currentTheme.subtextColor}`}>
                     Màu nền công thái học:
                   </span>
-                  <span className={`font-serif italic text-[11px] sm:text-xs ${currentTheme.accentColor}`}>
+                  <span className={`font-serif italic text-[11px] sm:text-xs font-semibold ${currentTheme.accentColor}`}>
                     {currentTheme.name}
                   </span>
                 </div>
@@ -766,25 +865,36 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
                   {(Object.keys(READER_THEMES) as ReaderThemeKey[]).map((key) => {
                     const item = READER_THEMES[key];
                     const isSelected = themeKey === key;
+                    const btnStyle = THEME_BUTTON_STYLES[key];
                     return (
                       <button
                         key={key}
                         type="button"
                         onClick={() => setThemeKey(key)}
-                        className={`flex items-center gap-2 p-2 rounded-xl border text-left transition-all cursor-pointer ${
+                        className={`theme-pill-btn flex items-center gap-2 p-2 rounded-xl border text-left transition-all cursor-pointer ${
                           isSelected
-                            ? 'ring-2 ring-pink-500 ring-offset-1 border-pink-400 font-bold shadow-xs'
-                            : 'border-stone-200 dark:border-stone-700 hover:border-pink-300'
+                            ? 'ring-2 ring-pink-500 ring-offset-1 font-bold shadow-xs'
+                            : 'hover:border-pink-300'
                         }`}
-                        style={{ backgroundColor: item.bgHex }}
+                        style={{
+                          backgroundColor: item.bgHex,
+                          borderColor: isSelected ? '#ec4899' : btnStyle.borderColor,
+                          color: btnStyle.textColor,
+                        }}
                       >
                         <span
-                          className="w-4 h-4 rounded-full border border-black/15 flex items-center justify-center shrink-0"
-                          style={{ backgroundColor: item.bgHex }}
+                          className="w-4 h-4 rounded-full border flex items-center justify-center shrink-0"
+                          style={{
+                            backgroundColor: item.bgHex,
+                            borderColor: btnStyle.circleBorder,
+                          }}
                         >
-                          {isSelected && <Check className="w-2.5 h-2.5 text-pink-600 dark:text-pink-400 stroke-[3]" />}
+                          {isSelected && <Check className={`w-2.5 h-2.5 stroke-[3] ${btnStyle.checkColor}`} />}
                         </span>
-                        <span className="text-[11px] sm:text-xs text-stone-900 font-serif truncate leading-tight">
+                        <span
+                          className="theme-pill-label text-[11px] sm:text-xs font-serif font-medium truncate leading-tight"
+                          style={{ color: btnStyle.textColor }}
+                        >
                           {item.name}
                         </span>
                       </button>
@@ -794,7 +904,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
               </div>
 
               {/* 2. Font Size, Font Family, Line Height & Width Controls */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+              <div className={`grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t ${currentTheme.dividerColor}`}>
                 {/* Font Size Adjuster */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
@@ -896,16 +1006,27 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
       {/* ========================================================================= */}
       <div
         ref={contentRef}
-        className={`w-full p-4 sm:p-8 md:p-12 rounded-3xl border shadow-sm space-y-6 sm:space-y-8 transition-colors duration-300 overflow-hidden ${currentTheme.cardBg} ${currentTheme.cardBorder}`}
+        data-reader-theme={themeKey}
+        data-font-family={fontFamily}
+        data-line-height={lineHeight}
+        className={`reader-card w-full p-4 sm:p-8 md:p-12 rounded-3xl border shadow-sm space-y-6 sm:space-y-8 transition-colors duration-300 overflow-hidden ${currentTheme.cardBg} ${currentTheme.cardBorder}`}
       >
         {/* Chapter Header */}
         <div className={`text-center space-y-2.5 pb-5 border-b ${currentTheme.dividerColor}`}>
           <div className="flex flex-wrap items-center justify-center gap-2">
-            <span className="px-3 py-0.5 rounded-full text-[11px] sm:text-xs font-serif uppercase tracking-wider font-semibold bg-pink-50 dark:bg-pink-950/60 text-pink-600 dark:text-pink-400 border border-pink-200/60 dark:border-pink-900 truncate max-w-full">
+            <span className={`px-3 py-0.5 rounded-full text-[11px] sm:text-xs font-serif uppercase tracking-wider font-semibold border truncate max-w-full ${
+              themeKey === 'dark'
+                ? 'bg-pink-950/60 text-pink-300 border-pink-800/80'
+                : 'bg-pink-50 text-pink-600 border-pink-200/60'
+            }`}>
               {story.title}
             </span>
             {(chapter.isExtra || chapter.partType === 'extra') && (
-              <span className="px-3 py-0.5 rounded-full text-[11px] sm:text-xs font-serif font-semibold bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800 shadow-2xs">
+              <span className={`px-3 py-0.5 rounded-full text-[11px] sm:text-xs font-serif font-semibold border shadow-2xs ${
+                themeKey === 'dark'
+                  ? 'bg-rose-950/80 text-rose-300 border-rose-800'
+                  : 'bg-rose-100 text-rose-700 border-rose-300'
+              }`}>
                 🌸 Phiên ngoại đặc biệt {chapter.extraNumber ? `#${chapter.extraNumber}` : ''}
               </span>
             )}
@@ -1024,10 +1145,13 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         ) : (
           /* Actual Story Prose Content */
           <div
-            className={`space-y-5 sm:space-y-6 select-text transition-all duration-200 break-words ${
-              fontFamily === 'serif' ? 'font-serif' : 'font-sans'
-            } ${lineHeight === 'loose' ? 'leading-loose sm:leading-[2.1]' : 'leading-relaxed sm:leading-[1.8]'} ${
-              currentTheme.textColor
+            data-reader-theme={themeKey}
+            data-font-family={fontFamily}
+            data-line-height={lineHeight}
+            className={`reader-prose space-y-5 sm:space-y-6 select-text transition-all duration-200 break-words ${
+              fontFamily === 'serif' ? 'reader-font-serif font-serif' : 'reader-font-sans font-sans'
+            } ${lineHeight === 'loose' ? 'reader-line-loose leading-loose sm:leading-[2.2]' : 'reader-line-relaxed leading-relaxed sm:leading-[1.8]'} ${
+              themeKey === 'dark' ? 'text-[#e4e4e7]' : currentTheme.textColor
             }`}
             style={{ fontSize: `${fontSize}px` }}
           >
@@ -1812,16 +1936,16 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
 
             {/* Chapter Items List */}
             <div className="flex-1 overflow-y-auto p-2.5 sm:p-4 space-y-1.5">
-              {sortedChapters.length === 0 ? (
+              {sortedTocChapters.length === 0 ? (
                 <div className="py-10 text-center space-y-1">
                   <p className={`font-serif text-xs sm:text-sm italic ${currentTheme.subtextColor}`}>
                     Không tìm thấy chương truyện nào khớp với từ khóa "{tocSearch}"
                   </p>
                 </div>
               ) : (
-                sortedChapters.map((ch) => {
+                sortedTocChapters.map((ch) => {
                   const isCurrent = ch.chapterNumber === chapter.chapterNumber;
-                  const isChUnlocked = !ch.isLocked || unlockedChapters[ch.id];
+                  const isChUnlocked = !ch.isLocked || Boolean(unlockedChapters[ch.id]) || Boolean(isAuthor || isMainAuthor || isCollaborator);
                   const isExtra = ch.isExtra || ch.partType === 'extra';
 
                   return (
