@@ -605,7 +605,7 @@ export default function App() {
                                   <span>Phong thư đang mở</span>
                                   <span className="text-stone-300 dark:text-stone-700">•</span>
                                   <span className="text-stone-500 dark:text-stone-400 normal-case font-normal text-xs">
-                                    Nhấp lại phong thư hoặc nút đóng để gập lại
+                                    Nhấp lại phong thư hoặc nút đóng
                                   </span>
                                 </div>
                                 <h3 className="font-serif text-lg sm:text-xl font-bold text-stone-800 dark:text-stone-100 mt-0.5">
@@ -613,12 +613,12 @@ export default function App() {
                                     (storyFilter === 'all'
                                       ? 'Tất cả tác phẩm trong nhà Mel'
                                       : storyFilter === 'completed'
-                                      ? 'Truyện đã hoàn thành (Kết thúc viên mãn HE)'
-                                      : 'Truyện chưa hoàn thành (Đang tiến hành ra chương)')}
+                                      ? 'Thư đã viết (Đã hoàn thành)'
+                                      : 'Thư đang viết (Đang tiến hành)')}
                                   {activeLetter === 'password' &&
-                                    'Gợi ý Password & Thử nghiệm giải mật mã'}
+                                    'Gợi ý & Kiểm tra password'}
                                   {activeLetter === 'other' &&
-                                    'Một số mục khác: Hòm thư tâm sự, Playlist mùa hạ & Góc đọc'}
+                                    'Gửi thư, âm nhạc, quy định'}
                                 </h3>
                               </div>
                             </div>
@@ -678,9 +678,9 @@ export default function App() {
                                   </div>
                                   <h2 className="font-serif text-xl sm:text-2xl font-bold text-stone-800 dark:text-stone-100 mt-1">
                                     {storyFilter === 'completed'
-                                      ? 'Kho tàng truyện đã full (HE viên mãn)'
+                                      ? 'Thư đã hoàn thành'
                                       : storyFilter === 'ongoing'
-                                      ? 'Truyện đang tiến hành (Cập nhật đều đặn)'
+                                      ? 'Thư đang viết'
                                       : 'Danh sách tác phẩm ngôn tình mùa hè'}
                                   </h2>
                                 </div>
