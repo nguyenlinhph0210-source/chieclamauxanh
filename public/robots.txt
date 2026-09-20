@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://nguyenlinhph0210-source.github.io/chieclamauxanh/sitemap.xml
