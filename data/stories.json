@@ -1,5 +1,36 @@
 [
   {
+    "id": "nang-luc-cua-man-em",
+    "title": "Năng lực của màn đêm",
+    "originalTitle": "",
+    "author": "Thù Vỉ",
+    "translator": "Mellifluous",
+    "status": "ongoing",
+    "genre": [
+      "Ngôn tình",
+      "Hiện đại",
+      "Nhẹ nhàng",
+      "Chữa lành",
+      "Đô thị",
+      "Con cưng của trời",
+      "Ấm áp"
+    ],
+    "summary": "Nếu đời người có thể chia thành thật nhiều, thật nhiều chương, thì đêm Địch Việt bước chân vào cửa nhà Lương Án Nhất hẳn là điểm khởi đầu cho một chương mới.\n\nTên của chương ấy chẳng quá dài —— Một đêm tràn đầy khả năng.\n\nBẢN DỊCH ĐÃ NHẬN ĐƯỢC SỰ CHO PHÉP CỦA TÁC GIẢ VỚI MỤC ĐÍCH PHI LỢI NHUẬN",
+    "totalChapters": 47,
+    "completedChapters": 0,
+    "mainChaptersCount": 47,
+    "extraChaptersCount": 0,
+    "coverImage": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=800&auto=format&fit=crop",
+    "colorTheme": "from-pink-100 to-rose-200 dark:from-pink-950/40 dark:to-rose-900/40",
+    "hasPassword": false,
+    "passwordHint": "",
+    "passwordKey": "",
+    "updatedAt": "2026-09-20T14:49:39.141Z",
+    "views": 0,
+    "likes": 0,
+    "featured": true
+  },
+  {
     "id": "khac-ten-anh-len-bia-mo-cua-em",
     "title": "Khắc tên anh lên bia mộ của em",
     "originalTitle": "",
@@ -56,37 +87,6 @@
     "updatedAt": "2026-09-20T14:34:32.748Z",
     "views": 10,
     "likes": 3,
-    "featured": true
-  },
-  {
-    "id": "nang-luc-cua-man-em",
-    "title": "Năng lực của màn đêm",
-    "originalTitle": "",
-    "author": "Thù Vỉ",
-    "translator": "Mellifluous",
-    "status": "ongoing",
-    "genre": [
-      "Ngôn tình",
-      "Hiện đại",
-      "Nhẹ nhàng",
-      "1v1",
-      "Chữa lành",
-      "Đô thị",
-      "Con cưng của trời"
-    ],
-    "summary": "Nếu đời người có thể chia thành thật nhiều, thật nhiều chương, thì đêm Địch Việt bước chân vào cửa nhà Lương Án Nhất hẳn là điểm khởi đầu cho một chương mới.\n\nTên của chương ấy chẳng quá dài —— Một đêm tràn đầy khả năng.\n\nBẢN DỊCH ĐÃ NHẬN ĐƯỢC SỰ CHO PHÉP CỦA TÁC GIẢ VỚI MỤC ĐÍCH PHI LỢI NHUẬN",
-    "totalChapters": 47,
-    "completedChapters": 0,
-    "mainChaptersCount": 47,
-    "extraChaptersCount": 0,
-    "coverImage": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=800&auto=format&fit=crop",
-    "colorTheme": "from-pink-100 to-rose-200 dark:from-pink-950/40 dark:to-rose-900/40",
-    "hasPassword": false,
-    "passwordHint": "",
-    "passwordKey": "",
-    "updatedAt": "2026-09-18T06:52:33.528Z",
-    "views": 0,
-    "likes": 0,
     "featured": true
   }
 ]
