@@ -29,6 +29,7 @@ export interface RichTextEditorProps {
   label?: string;
   required?: boolean;
   minHeight?: number;
+  maxHeight?: number;
   helperText?: string;
   fontFamily?: 'serif' | 'sans';
   id?: string;
@@ -44,6 +45,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   label,
   required = false,
   minHeight = 220,
+  maxHeight = 540,
   helperText,
   fontFamily = 'serif',
   id,
@@ -60,6 +62,8 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const [editorMode, setEditorMode] = useState<'visual' | 'source' | 'preview'>('visual');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+
+  const effectiveMaxHeight = Math.max(maxHeight, minHeight);
 
   // Synchronize incoming value with visual editor
   useEffect(() => {
@@ -89,8 +93,14 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       setEditorMode('visual');
     }
 
-    // Ensure editor has focus
-    if (editorRef.current) {
+    // Ensure editor has focus only if not already active/selected inside it
+    const selection = window.getSelection();
+    const hasSelectionInEditor =
+      Boolean(selection &&
+      selection.rangeCount > 0 &&
+      editorRef.current?.contains(selection.anchorNode));
+
+    if (!hasSelectionInEditor && editorRef.current) {
       editorRef.current.focus();
     }
 
@@ -105,9 +115,9 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       } else if (command === 'indent') {
         // Author explicitly uses indent tool:
         // Indent the current paragraph block cleanly
-        const selection = window.getSelection();
-        if (selection && selection.rangeCount > 0) {
-          const range = selection.getRangeAt(0);
+        const sel = window.getSelection();
+        if (sel && sel.rangeCount > 0) {
+          const range = sel.getRangeAt(0);
           let node: Node | null = range.startContainer;
           while (node && node !== editorRef.current && node.nodeType !== Node.ELEMENT_NODE) {
             node = node.parentNode;
@@ -199,8 +209,8 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             : 'space-y-1.5'
         }`}
       >
-        {/* Header with Label, Mode Toggles & Stats */}
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        {/* Header with Label, Mode Toggles & Stats (Not sticky - scrolls naturally with page) */}
+        <div className="flex flex-wrap items-center justify-between gap-2 px-1">
           {label && (
             <label
               htmlFor={inputId}
@@ -214,7 +224,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           <div className="flex items-center gap-2 ml-auto">
             {showWordCount && (
               <span className="text-[11px] text-stone-500 dark:text-stone-400 font-mono bg-stone-100 dark:bg-stone-800/80 px-2 py-0.5 rounded-md border border-stone-200/60 dark:border-stone-700/60">
-                {wordCount} từ • {charCount} ký tự • ~{estReadMinutes} phút đọc
+                {wordCount} từ <span className="hidden sm:inline">• {charCount} ký tự • ~{estReadMinutes} phút đọc</span>
               </span>
             )}
 
@@ -282,173 +292,6 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           </div>
         </div>
 
-        {/* Formatting Toolbar */}
-        <div className="flex flex-wrap items-center justify-between gap-1 p-1.5 rounded-xl bg-stone-100/90 dark:bg-stone-800/90 border border-stone-200/80 dark:border-stone-700 text-xs">
-          {/* Main Formatting Action Buttons */}
-          <div className="flex flex-wrap items-center gap-0.5 sm:gap-1">
-            {/* Inline Styles */}
-            <div className="flex items-center gap-0.5 pr-1 border-r border-stone-200 dark:border-stone-700">
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => executeCommand('bold')}
-                className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 hover:text-pink-600 dark:hover:text-pink-400 transition-colors cursor-pointer"
-                title="In đậm (Ctrl+B)"
-              >
-                <Bold className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => executeCommand('italic')}
-                className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 hover:text-pink-600 dark:hover:text-pink-400 transition-colors cursor-pointer"
-                title="In nghiêng (Ctrl+I)"
-              >
-                <Italic className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => executeCommand('underline')}
-                className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 hover:text-pink-600 dark:hover:text-pink-400 transition-colors cursor-pointer"
-                title="Gạch chân (Ctrl+U)"
-              >
-                <Underline className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => executeCommand('strikeThrough')}
-                className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 hover:text-pink-600 dark:hover:text-pink-400 transition-colors cursor-pointer"
-                title="Gạch ngang chữ"
-              >
-                <Strikethrough className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => executeCommand('highlight')}
-                className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 hover:text-pink-600 dark:hover:text-pink-400 transition-colors cursor-pointer"
-                title="Đánh dấu highlight màu hồng phấn"
-              >
-                <span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-[10px] bg-pink-200 dark:bg-pink-900/60 text-pink-700 dark:text-pink-300 rounded-sm">H</span>
-              </button>
-            </div>
-
-            {/* Alignments: Left, Center, Right, Justify */}
-            <div className="flex items-center gap-0.5 pr-1 border-r border-stone-200 dark:border-stone-700">
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => executeCommand('justifyLeft')}
-                className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 hover:text-pink-600 dark:hover:text-pink-400 transition-colors cursor-pointer"
-                title="Căn lề trái"
-              >
-                <AlignLeft className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => executeCommand('justifyCenter')}
-                className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 hover:text-pink-600 dark:hover:text-pink-400 transition-colors cursor-pointer"
-                title="Căn giữa dòng / đoạn"
-              >
-                <AlignCenter className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => executeCommand('justifyRight')}
-                className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 hover:text-pink-600 dark:hover:text-pink-400 transition-colors cursor-pointer"
-                title="Căn lề phải"
-              >
-                <AlignRight className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => executeCommand('justifyFull')}
-                className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 hover:text-pink-600 dark:hover:text-pink-400 transition-colors cursor-pointer"
-                title="Căn đều hai bên"
-              >
-                <AlignJustify className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {/* Structure: Indent (Explicit), Heading, Quote, Divider */}
-            <div className="flex items-center gap-0.5 pr-1 border-r border-stone-200 dark:border-stone-700">
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => executeCommand('indent')}
-                className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 hover:text-pink-600 dark:hover:text-pink-400 transition-colors cursor-pointer"
-                title="Thụt đầu dòng đoạn văn này (chỉ thụt lề khi bạn bấm nút này, không tự động thụt lung tung)"
-              >
-                <Indent className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => executeCommand('formatBlock', '<h3>')}
-                className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 hover:text-pink-600 dark:hover:text-pink-400 transition-colors cursor-pointer"
-                title="Tiêu đề đề mục"
-              >
-                <Heading className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => executeCommand('formatBlock', '<blockquote>')}
-                className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 hover:text-pink-600 dark:hover:text-pink-400 transition-colors cursor-pointer"
-                title="Khối trích dẫn / Lời tâm sự"
-              >
-                <Quote className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => executeCommand('divider')}
-                className="px-2 py-1 rounded-lg hover:bg-white dark:hover:bg-stone-700 text-pink-600 dark:text-pink-400 font-serif font-semibold text-xs transition-colors cursor-pointer flex items-center gap-1"
-                title="Chèn hoa phân cách chính giữa (❀ ❀ ❀)"
-              >
-                <span>❀ ❀ ❀</span>
-              </button>
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => executeCommand('removeFormat')}
-                className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-stone-700 text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 transition-colors cursor-pointer"
-                title="Xóa định dạng trên phần bôi đen"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {/* Quick Actions */}
-            <button
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={handleNormalizeSpacing}
-              className="px-2 py-1 rounded-lg hover:bg-white dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 text-[11px] font-medium transition-colors flex items-center gap-1 cursor-pointer"
-              title="Dọn dẹp dòng trống thừa"
-            >
-              <Sparkles className="w-3 h-3 text-amber-500" />
-              <span className="hidden sm:inline">Chuẩn hóa dòng</span>
-            </button>
-          </div>
-
-          {/* Guide Help Toggle */}
-          <button
-            type="button"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => setShowHelp(!showHelp)}
-            className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-stone-700 text-stone-500 hover:text-pink-600 dark:hover:text-pink-400 transition-colors cursor-pointer ml-auto"
-            title="Hướng dẫn định dạng"
-          >
-            <HelpCircle className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
         {/* Quick Help Box */}
         {showHelp && (
           <div className="p-3 rounded-xl bg-pink-50/70 dark:bg-stone-800/70 border border-pink-200 dark:border-stone-700 text-xs text-stone-700 dark:text-stone-300 space-y-1.5">
@@ -474,62 +317,241 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           </div>
         )}
 
-        {/* Editor Area */}
+        {/* Unified Editor Card: Toolbar anchored at top with NO gap above it */}
         <div
-          className={`w-full rounded-xl border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-900 transition-all focus-within:ring-2 focus-within:ring-pink-300 focus-within:border-pink-400 ${
-            isFullscreen ? 'flex-1 overflow-hidden flex flex-col' : ''
+          className={`w-full rounded-2xl border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-900 shadow-xs focus-within:ring-2 focus-within:ring-pink-300 focus-within:border-pink-400 overflow-hidden flex flex-col transition-all ${
+            isFullscreen ? 'flex-1 h-full' : ''
           }`}
         >
-          {editorMode === 'preview' ? (
-            /* PREVIEW MODE */
-            <div
-              className={`w-full overflow-y-auto p-4 sm:p-6 bg-pink-50/10 dark:bg-stone-900/60 ${
-                fontFamily === 'serif' ? 'font-serif' : 'font-sans'
-              } text-stone-900 dark:text-stone-100 text-sm sm:text-base leading-relaxed custom-scrollbar`}
-              style={{ minHeight: `${minHeight}px`, height: isFullscreen ? '100%' : 'auto' }}
-            >
-              {value && value.trim() ? (
-                <RichTextRenderer content={value} indentParagraphs={false} />
-              ) : (
-                <p className="text-stone-400 italic">Chưa có nội dung văn bản để xem trước.</p>
-              )}
+          {/* Integrated Formatting Toolbar - Flush at the top of the editor frame */}
+          <div className="shrink-0 bg-stone-100/95 dark:bg-stone-800/95 border-b border-stone-200 dark:border-stone-700 px-2 sm:px-2.5 py-1.5 flex flex-wrap items-center justify-between gap-1 text-xs select-none">
+            {/* Main Formatting Action Buttons */}
+            <div className="flex flex-wrap items-center gap-0.5 sm:gap-1">
+              {/* Inline Styles */}
+              <div className="flex items-center gap-0.5 pr-1 border-r border-stone-200 dark:border-stone-700">
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => executeCommand('bold')}
+                  className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 hover:text-pink-600 dark:hover:text-pink-400 transition-colors cursor-pointer"
+                  title="In đậm (Ctrl+B)"
+                >
+                  <Bold className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => executeCommand('italic')}
+                  className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 hover:text-pink-600 dark:hover:text-pink-400 transition-colors cursor-pointer"
+                  title="In nghiêng (Ctrl+I)"
+                >
+                  <Italic className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => executeCommand('underline')}
+                  className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 hover:text-pink-600 dark:hover:text-pink-400 transition-colors cursor-pointer"
+                  title="Gạch chân (Ctrl+U)"
+                >
+                  <Underline className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => executeCommand('strikeThrough')}
+                  className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 hover:text-pink-600 dark:hover:text-pink-400 transition-colors cursor-pointer"
+                  title="Gạch ngang chữ"
+                >
+                  <Strikethrough className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => executeCommand('highlight')}
+                  className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 hover:text-pink-600 dark:hover:text-pink-400 transition-colors cursor-pointer"
+                  title="Đánh dấu highlight màu hồng phấn"
+                >
+                  <span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-[10px] bg-pink-200 dark:bg-pink-900/60 text-pink-700 dark:text-pink-300 rounded-sm">H</span>
+                </button>
+              </div>
+
+              {/* Alignments: Left, Center, Right, Justify */}
+              <div className="flex items-center gap-0.5 pr-1 border-r border-stone-200 dark:border-stone-700">
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => executeCommand('justifyLeft')}
+                  className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 hover:text-pink-600 dark:hover:text-pink-400 transition-colors cursor-pointer"
+                  title="Căn lề trái"
+                >
+                  <AlignLeft className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => executeCommand('justifyCenter')}
+                  className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 hover:text-pink-600 dark:hover:text-pink-400 transition-colors cursor-pointer"
+                  title="Căn giữa dòng / đoạn"
+                >
+                  <AlignCenter className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => executeCommand('justifyRight')}
+                  className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 hover:text-pink-600 dark:hover:text-pink-400 transition-colors cursor-pointer"
+                  title="Căn lề phải"
+                >
+                  <AlignRight className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => executeCommand('justifyFull')}
+                  className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 hover:text-pink-600 dark:hover:text-pink-400 transition-colors cursor-pointer"
+                  title="Căn đều hai bên"
+                >
+                  <AlignJustify className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Structure: Indent (Explicit), Heading, Quote, Divider */}
+              <div className="flex items-center gap-0.5 pr-1 border-r border-stone-200 dark:border-stone-700">
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => executeCommand('indent')}
+                  className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 hover:text-pink-600 dark:hover:text-pink-400 transition-colors cursor-pointer"
+                  title="Thụt đầu dòng đoạn văn này (chỉ thụt lề khi bạn bấm nút này, không tự động thụt lung tung)"
+                >
+                  <Indent className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => executeCommand('formatBlock', '<h3>')}
+                  className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 hover:text-pink-600 dark:hover:text-pink-400 transition-colors cursor-pointer"
+                  title="Tiêu đề đề mục"
+                >
+                  <Heading className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => executeCommand('formatBlock', '<blockquote>')}
+                  className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 hover:text-pink-600 dark:hover:text-pink-400 transition-colors cursor-pointer"
+                  title="Khối trích dẫn / Lời tâm sự"
+                >
+                  <Quote className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => executeCommand('divider')}
+                  className="px-2 py-1 rounded-lg hover:bg-white dark:hover:bg-stone-700 text-pink-600 dark:text-pink-400 font-serif font-semibold text-xs transition-colors cursor-pointer flex items-center gap-1"
+                  title="Chèn hoa phân cách chính giữa (❀ ❀ ❀)"
+                >
+                  <span>❀ ❀ ❀</span>
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => executeCommand('removeFormat')}
+                  className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-stone-700 text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 transition-colors cursor-pointer"
+                  title="Xóa định dạng trên phần bôi đen"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Quick Actions */}
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={handleNormalizeSpacing}
+                className="px-2 py-1 rounded-lg hover:bg-white dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 text-[11px] font-medium transition-colors flex items-center gap-1 cursor-pointer"
+                title="Dọn dẹp dòng trống thừa"
+              >
+                <Sparkles className="w-3 h-3 text-amber-500" />
+                <span className="hidden sm:inline">Chuẩn hóa dòng</span>
+              </button>
             </div>
-          ) : editorMode === 'source' ? (
-            /* SOURCE / PLAIN TEXT MODE */
-            <textarea
-              ref={textareaRef}
-              rows={8}
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
-              placeholder={placeholder}
-              className={`w-full p-4 bg-transparent outline-none resize-none font-mono text-xs sm:text-sm leading-relaxed text-stone-900 dark:text-stone-100 custom-scrollbar ${
-                isFullscreen ? 'flex-1 h-full' : ''
-              }`}
-              style={{ minHeight: `${minHeight}px` }}
-            />
-          ) : (
-            /* VISUAL WYSIWYG MODE */
-            <div
-              ref={editorRef}
-              contentEditable
-              suppressContentEditableWarning
-              onInput={handleVisualInput}
-              onBlur={handleVisualInput}
-              role="textbox"
-              aria-multiline="true"
-              data-placeholder={placeholder}
-              className={`w-full p-4 sm:p-5 bg-transparent outline-none overflow-y-auto select-text text-stone-900 dark:text-stone-100 text-sm sm:text-base leading-relaxed ${
-                fontFamily === 'serif' ? 'font-serif' : 'font-sans'
-              } custom-scrollbar relative empty:before:content-[attr(data-placeholder)] empty:before:text-stone-400 empty:before:pointer-events-none ${
-                isFullscreen ? 'flex-1 h-full' : ''
-              }`}
-              style={{
-                minHeight: `${minHeight}px`,
-                // Ensure no default indentation
-                textIndent: '0',
-              }}
-            />
-          )}
+
+            {/* Guide Help Toggle */}
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setShowHelp(!showHelp)}
+              className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-stone-700 text-stone-500 hover:text-pink-600 dark:hover:text-pink-400 transition-colors cursor-pointer ml-auto"
+              title="Hướng dẫn định dạng"
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Editor Content Area - Attached directly to toolbar with NO gap */}
+          <div
+            className={`w-full relative flex-1 flex flex-col ${
+              isFullscreen ? 'h-full overflow-hidden' : ''
+            }`}
+          >
+            {editorMode === 'preview' ? (
+              /* PREVIEW MODE */
+              <div
+                className={`w-full flex-1 overflow-y-auto p-4 sm:p-6 bg-pink-50/10 dark:bg-stone-900/60 ${
+                  fontFamily === 'serif' ? 'font-serif' : 'font-sans'
+                } text-stone-900 dark:text-stone-100 text-sm sm:text-base leading-relaxed custom-scrollbar`}
+                style={{
+                  minHeight: `${minHeight}px`,
+                  maxHeight: isFullscreen ? '100%' : `${effectiveMaxHeight}px`,
+                }}
+              >
+                {value && value.trim() ? (
+                  <RichTextRenderer content={value} indentParagraphs={false} />
+                ) : (
+                  <p className="text-stone-400 italic">Chưa có nội dung văn bản để xem trước.</p>
+                )}
+              </div>
+            ) : editorMode === 'source' ? (
+              /* SOURCE / PLAIN TEXT MODE */
+              <textarea
+                ref={textareaRef}
+                rows={8}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                placeholder={placeholder}
+                className="w-full flex-1 p-4 bg-transparent outline-none resize-none font-mono text-xs sm:text-sm leading-relaxed text-stone-900 dark:text-stone-100 custom-scrollbar overflow-y-auto"
+                style={{
+                  minHeight: `${minHeight}px`,
+                  maxHeight: isFullscreen ? '100%' : `${effectiveMaxHeight}px`,
+                }}
+              />
+            ) : (
+              /* VISUAL WYSIWYG MODE */
+              <div
+                ref={editorRef}
+                contentEditable
+                suppressContentEditableWarning
+                onInput={handleVisualInput}
+                onBlur={handleVisualInput}
+                role="textbox"
+                aria-multiline="true"
+                data-placeholder={placeholder}
+                className={`w-full flex-1 p-4 sm:p-5 bg-transparent outline-none overflow-y-auto select-text text-stone-900 dark:text-stone-100 text-sm sm:text-base leading-relaxed ${
+                  fontFamily === 'serif' ? 'font-serif' : 'font-sans'
+                } custom-scrollbar relative empty:before:content-[attr(data-placeholder)] empty:before:text-stone-400 empty:before:pointer-events-none ${
+                  isFullscreen ? 'h-full' : ''
+                }`}
+                style={{
+                  minHeight: `${minHeight}px`,
+                  maxHeight: isFullscreen ? '100%' : `${effectiveMaxHeight}px`,
+                  // Ensure no default indentation
+                  textIndent: '0',
+                }}
+              />
+            )}
+          </div>
         </div>
 
         {/* Helper Note */}

@@ -9,28 +9,5 @@
     "id": "track-1789710638111-ru4m",
     "createdAt": "2026-09-18T05:50:38.111Z",
     "sourceType": "direct"
-  },
-  {
-    "id": "track-1789626312203-o6m0",
-    "title": "Thử nghiệm",
-    "artist": "Taylor Swift",
-    "duration": "03:30",
-    "mood": "Thư giãn",
-    "audioUrl": "https://www.dropbox.com/scl/fi/2kebeoxt1daok4pb0k3hb/YTSave_YouTube_TAYLOR-SWIFT-THE-ERAS-TOUR-Concert-Best-_Media_uo_CXTq6gmU_008_128k.mp3?rlkey=jq5zbqllvl1m0wuuruix4cnus&st=iy1gtfyb&dl=0",
-    "sourceType": "direct",
-    "addedBy": "Tác giả",
-    "createdAt": "2026-09-17T06:25:12.203Z"
-  },
-  {
-    "id": "track-1789628140577-i6f4s",
-    "title": "[Ghibli Piano Collection] Relaxing Piano Music Studying, Coffee, Reading, Healing Ghibli Music (64 Kbps)",
-    "artist": "Mellifluous",
-    "duration": "71:58",
-    "mood": "Thư giãn",
-    "audioUrl": "firestore://track-1789628140577-i6f4s",
-    "sourceType": "uploaded",
-    "fileSize": "34.7 MB",
-    "addedBy": "Tác giả",
-    "createdAt": "2026-09-17T07:03:34.891Z"
   }
 ]
