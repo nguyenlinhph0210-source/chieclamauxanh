@@ -75,12 +75,29 @@ app.use(express.urlencoded({ extended: true, limit: '60mb' }));
 // Initialize persistent server data store
 initDataStore();
 
-// SSE Clients for instant real-time synchronization across all devices
+// SSE Clients & Presence Registry for instant real-time synchronization across all devices
 interface SSEClient {
   id: string;
   res: Response;
 }
 let sseClients: SSEClient[] = [];
+
+// Sliding window presence map (visitorId -> lastActiveTimestamp)
+const activePresences = new Map<string, number>();
+
+export const getLiveActiveReadersCount = (): number => {
+  const now = Date.now();
+  const threshold = now - 50000; // Active within the last 50 seconds
+  for (const [id, lastSeen] of activePresences.entries()) {
+    if (lastSeen < threshold) {
+      activePresences.delete(id);
+    }
+  }
+  // Total unique active readers: unique heartbeat visitors + any unique SSE clients
+  return Math.max(1, activePresences.size, sseClients.length);
+};
+
+let lastBroadcastActiveCount = 1;
 
 const broadcastEvent = (eventType: string, payload: any) => {
   const data = JSON.stringify({ type: eventType, payload, timestamp: Date.now() });
@@ -98,7 +115,7 @@ const broadcastEvent = (eventType: string, payload: any) => {
   }
 };
 
-// Periodic heartbeat for SSE to keep connections active through proxies
+// Periodic heartbeat for SSE & active count reconciliation
 setInterval(() => {
   const deadClients: string[] = [];
   sseClients.forEach((client) => {
@@ -112,7 +129,14 @@ setInterval(() => {
   if (deadClients.length > 0) {
     sseClients = sseClients.filter((c) => !deadClients.includes(c.id));
   }
-}, 15000);
+
+  // Check if live active count changed and broadcast
+  const currentCount = getLiveActiveReadersCount();
+  if (currentCount !== lastBroadcastActiveCount) {
+    lastBroadcastActiveCount = currentCount;
+    broadcastEvent('active_readers', { count: currentCount });
+  }
+}, 10000);
 
 // ==========================================
 // API ROUTES
@@ -171,9 +195,55 @@ app.post('/api/sync', (req: Request, res: Response) => {
   }
 });
 
-// Active readers endpoint
+// Active readers presence endpoint
 app.get('/api/active-readers', (req: Request, res: Response) => {
-  res.json({ count: Math.max(1, sseClients.length) });
+  res.json({ count: getLiveActiveReadersCount() });
+});
+
+// Periodic presence heartbeat endpoint for web & mobile readers
+app.post('/api/presence/heartbeat', (req: Request, res: Response) => {
+  try {
+    let bodyData = req.body;
+    if (typeof bodyData === 'string') {
+      try {
+        bodyData = JSON.parse(bodyData);
+      } catch {}
+    }
+    const visitorId = bodyData?.visitorId || req.query?.visitorId || `visitor-${req.ip || 'anon'}`;
+    activePresences.set(String(visitorId), Date.now());
+    const count = getLiveActiveReadersCount();
+    if (count !== lastBroadcastActiveCount) {
+      lastBroadcastActiveCount = count;
+      broadcastEvent('active_readers', { count });
+    }
+    res.json({ success: true, count });
+  } catch (err: any) {
+    res.json({ success: false, count: getLiveActiveReadersCount() });
+  }
+});
+
+// Presence leave endpoint when reader closes tab or navigates away
+app.post('/api/presence/leave', (req: Request, res: Response) => {
+  try {
+    let bodyData = req.body;
+    if (typeof bodyData === 'string') {
+      try {
+        bodyData = JSON.parse(bodyData);
+      } catch {}
+    }
+    const visitorId = bodyData?.visitorId || req.query?.visitorId;
+    if (visitorId) {
+      activePresences.delete(String(visitorId));
+    }
+    const count = getLiveActiveReadersCount();
+    if (count !== lastBroadcastActiveCount) {
+      lastBroadcastActiveCount = count;
+      broadcastEvent('active_readers', { count });
+    }
+    res.json({ success: true, count });
+  } catch {
+    res.json({ success: false });
+  }
 });
 
 // Realtime SSE endpoint
@@ -187,15 +257,22 @@ app.get('/api/events', (req: Request, res: Response) => {
   const clientId = `client-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
   const newClient: SSEClient = { id: clientId, res };
   sseClients.push(newClient);
+  activePresences.set(clientId, Date.now());
+
+  const currentCount = getLiveActiveReadersCount();
+  lastBroadcastActiveCount = currentCount;
 
   // Send initial welcome & current active readers count
-  res.write(`data: ${JSON.stringify({ type: 'connected', clientId })}\n\n`);
+  res.write(`data: ${JSON.stringify({ type: 'connected', clientId, activeCount: currentCount })}\n\n`);
   (res as any).flush?.();
-  broadcastEvent('active_readers', { count: Math.max(1, sseClients.length) });
+  broadcastEvent('active_readers', { count: currentCount });
 
   req.on('close', () => {
     sseClients = sseClients.filter((c) => c.id !== clientId);
-    broadcastEvent('active_readers', { count: Math.max(1, sseClients.length) });
+    activePresences.delete(clientId);
+    const updatedCount = getLiveActiveReadersCount();
+    lastBroadcastActiveCount = updatedCount;
+    broadcastEvent('active_readers', { count: updatedCount });
   });
 });
 
@@ -531,7 +608,7 @@ app.post('/api/comments/:id/reply/:replyId/like', (req: Request, res: Response) 
 // --- Realtime Stats API (100% Server Engine) ---
 app.get('/api/stats', (req: Request, res: Response) => {
   try {
-    const stats = getGlobalStats();
+    const stats = getGlobalStats(getLiveActiveReadersCount());
     res.json(stats);
   } catch (err: any) {
     res.status(500).json({ error: err.message || 'Failed to get stats' });
@@ -541,7 +618,7 @@ app.get('/api/stats', (req: Request, res: Response) => {
 app.post('/api/stats/visit', (req: Request, res: Response) => {
   try {
     const totalVisits = recordSiteVisit();
-    const stats = getGlobalStats();
+    const stats = getGlobalStats(getLiveActiveReadersCount());
     broadcastEvent('stats_updated', stats);
     res.json({ success: true, totalVisits });
   } catch (err: any) {
@@ -575,7 +652,7 @@ app.post('/api/stories/:id/like', (req: Request, res: Response) => {
     const { id } = req.params;
     const { delta } = req.body;
     const stats = toggleStoryLike(id, typeof delta === 'number' ? delta : 1);
-    const globalStats = getGlobalStats();
+    const globalStats = getGlobalStats(getLiveActiveReadersCount());
     broadcastEvent('story_stats_updated', { storyId: id, stats });
     broadcastEvent('stats_updated', globalStats);
     res.json({ success: true, stats, globalStats });
@@ -589,7 +666,7 @@ app.post('/api/stories/:id/follow', (req: Request, res: Response) => {
     const { id } = req.params;
     const { delta } = req.body;
     const stats = toggleStoryFollow(id, typeof delta === 'number' ? delta : 1);
-    const globalStats = getGlobalStats();
+    const globalStats = getGlobalStats(getLiveActiveReadersCount());
     broadcastEvent('story_stats_updated', { storyId: id, stats });
     broadcastEvent('stats_updated', globalStats);
     res.json({ success: true, stats, globalStats });

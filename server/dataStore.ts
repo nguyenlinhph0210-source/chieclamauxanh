@@ -902,14 +902,14 @@ const loadStats = () => {
 
 loadStats();
 
-export const getGlobalStats = () => {
+export const getGlobalStats = (liveActiveCount?: number) => {
   reloadCommentsIfChanged();
   return {
     totalVisits: cachedStats.global.totalVisits,
     totalFollowers: cachedStats.global.totalFollowers,
     totalLikes: cachedStats.global.totalLikes,
     totalComments: cachedComments.length,
-    activeReaders: 1,
+    activeReaders: typeof liveActiveCount === 'number' ? Math.max(1, liveActiveCount) : 1,
   };
 };
 

@@ -19,20 +19,20 @@
     ],
     "replies": [
       {
-        "text": "ok test",
-        "userEmail": "luclamly920@gmail.com",
-        "isAuthor": false,
-        "user": "Lâm Ly Lục",
-        "roleBadge": "Cộng sự",
         "likes": 1,
+        "text": "ok test",
+        "avatar": "🌿",
+        "id": "rep_1789816391584_clz6i",
         "likedBy": [
           "reader_1789816291239_tf9va"
         ],
-        "avatar": "🌿",
-        "isCollaborator": true,
+        "isAuthor": false,
+        "user": "Lâm Ly Lục",
+        "userEmail": "luclamly920@gmail.com",
         "replyToUser": "huhu",
-        "id": "rep_1789816391584_clz6i",
-        "createdAt": "2026-09-19T11:13:11.584Z"
+        "createdAt": "2026-09-19T11:13:11.584Z",
+        "roleBadge": "Cộng sự",
+        "isCollaborator": true
       }
     ]
   },
@@ -56,18 +56,18 @@
     ],
     "replies": [
       {
-        "isAuthor": false,
-        "createdAt": "2026-09-19T10:48:15.741Z",
-        "replyToUser": "Linh Nguyễn",
-        "likes": 1,
-        "user": "Bạn đọc",
-        "isCollaborator": false,
-        "userEmail": null,
-        "text": "Non",
         "likedBy": [
           "reader_1789816291239_tf9va"
         ],
+        "userEmail": null,
+        "isAuthor": false,
+        "createdAt": "2026-09-19T10:48:15.741Z",
+        "isCollaborator": false,
+        "text": "Non",
+        "replyToUser": "Linh Nguyễn",
         "id": "rep_1789814895741_wwz1t",
+        "likes": 1,
+        "user": "Bạn đọc",
         "avatar": "💬"
       }
     ]
@@ -82,7 +82,6 @@
     "userId": null,
     "isAuthor": false,
     "isCollaborator": false,
-    "roleBadge": null,
     "avatar": "🌸",
     "text": "heluuu",
     "createdAt": "2026-09-19T10:33:52.779Z",
@@ -91,47 +90,47 @@
     "likedBy": [],
     "replies": [
       {
-        "likedBy": [],
+        "isAuthor": false,
+        "id": "rep_1789818005647_ekddr",
+        "avatar": "💬",
+        "userEmail": null,
         "user": "Bạn đọc",
-        "isCollaborator": false,
         "replyToUser": "Haja",
-        "text": "uk",
-        "avatar": "💬",
-        "createdAt": "2026-09-19T11:40:05.647Z",
-        "isAuthor": false,
-        "userEmail": null,
-        "likes": 0,
-        "id": "rep_1789818005647_ekddr"
-      },
-      {
-        "userEmail": null,
         "isCollaborator": false,
-        "replyToUser": "Bạn đọc",
-        "isAuthor": false,
-        "likes": 0,
-        "roleBadge": "Độc giả",
+        "createdAt": "2026-09-19T11:40:05.647Z",
+        "text": "uk",
         "likedBy": [],
-        "createdAt": "2026-09-19T11:40:16.374Z",
-        "avatar": "💬",
-        "id": "rep_1789818016374_5fh5d",
-        "replyToId": "rep_1789818005647_ekddr",
-        "text": "oo kaf",
-        "user": "huhu"
+        "likes": 0
       },
       {
-        "text": "oo hihi",
-        "createdAt": "2026-09-19T11:40:36.234Z",
-        "user": "Lâm Ly Lục",
-        "likes": 0,
-        "id": "rep_1789818036234_3azy9",
-        "roleBadge": "Cộng sự",
-        "isAuthor": false,
+        "replyToId": "rep_1789818005647_ekddr",
         "likedBy": [],
-        "userEmail": "luclamly920@gmail.com",
+        "text": "oo kaf",
+        "userEmail": null,
+        "user": "huhu",
+        "replyToUser": "Bạn đọc",
+        "createdAt": "2026-09-19T11:40:16.374Z",
+        "likes": 0,
+        "isCollaborator": false,
+        "id": "rep_1789818016374_5fh5d",
+        "isAuthor": false,
+        "roleBadge": "Độc giả",
+        "avatar": "💬"
+      },
+      {
+        "likes": 0,
         "isCollaborator": true,
-        "avatar": "🌿",
+        "isAuthor": false,
+        "createdAt": "2026-09-19T11:40:36.234Z",
         "replyToId": "rep_1789818016374_5fh5d",
-        "replyToUser": "huhu"
+        "userEmail": "luclamly920@gmail.com",
+        "text": "oo hihi",
+        "likedBy": [],
+        "roleBadge": "Cộng sự",
+        "replyToUser": "huhu",
+        "id": "rep_1789818036234_3azy9",
+        "user": "Lâm Ly Lục",
+        "avatar": "🌿"
       }
     ]
   }

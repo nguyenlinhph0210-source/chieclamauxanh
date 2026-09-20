@@ -24,14 +24,14 @@ export const Footer: React.FC = () => {
 
     // 2. Start realtime reader presence heartbeat across all connected devices/browsers
     const unsubscribeHeartbeat = startActiveReaderHeartbeat((liveCount) => {
-      setStats((prev) => ({ ...prev, activeReaders: liveCount }));
+      setStats((prev) => ({ ...prev, activeReaders: Math.max(1, liveCount) }));
     });
 
-    // 3. Listen to live global stats changes from Firestore
+    // 3. Listen to live global stats changes from Firestore / Server Engine
     const unsubscribeStats = subscribeToGlobalStats((cloudStats) => {
       setStats((prev) => ({
         ...cloudStats,
-        activeReaders: prev.activeReaders || cloudStats.activeReaders,
+        activeReaders: Math.max(1, cloudStats.activeReaders || 1, prev.activeReaders || 1),
       }));
       setIsLiveConnected(true);
     });

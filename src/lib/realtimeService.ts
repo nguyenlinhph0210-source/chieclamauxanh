@@ -267,6 +267,26 @@ export const notifyStoryStatsSubscribers = (storyId: string, stats: StoryRealtim
   }
 };
 
+// Active readers presence registry & subscribers
+const activeReaderSubscribers = new Set<(count: number) => void>();
+let currentLiveActiveReaders = 1;
+
+export const updateLiveActiveReaders = (count: number) => {
+  const validCount = Math.max(1, count);
+  currentLiveActiveReaders = validCount;
+  cachedGlobalStats.activeReaders = validCount;
+  activeReaderSubscribers.forEach((cb) => {
+    try {
+      cb(validCount);
+    } catch {}
+  });
+  globalStatsListeners.forEach((cb) => {
+    try {
+      cb({ ...cachedGlobalStats });
+    } catch {}
+  });
+};
+
 let cachedGlobalStats: GlobalRealtimeStats = {
   totalVisits: typeof window !== 'undefined' ? Math.max(1, Number(localStorage.getItem('mel_site_visits') || '1')) : 1,
   activeReaders: 1,
@@ -276,7 +296,15 @@ let cachedGlobalStats: GlobalRealtimeStats = {
 };
 
 export const notifyGlobalStatsSubscribers = (partial: Partial<GlobalRealtimeStats>) => {
-  cachedGlobalStats = { ...cachedGlobalStats, ...partial };
+  const safeActive =
+    partial.activeReaders !== undefined
+      ? Math.max(1, partial.activeReaders, currentLiveActiveReaders)
+      : Math.max(1, currentLiveActiveReaders);
+  cachedGlobalStats = {
+    ...cachedGlobalStats,
+    ...partial,
+    activeReaders: safeActive,
+  };
   globalStatsListeners.forEach((cb) => {
     try {
       cb({ ...cachedGlobalStats });
@@ -1067,10 +1095,7 @@ export const initServerRealtimeSync = () => {
             updateGenresFromRemote(msg.payload);
           }
         } else if (msg.type === 'active_readers' && typeof msg.payload?.count === 'number') {
-          currentLiveActiveReaders = Math.max(1, msg.payload.count);
-          activeReaderSubscribers.forEach((cb) => {
-            try { cb(currentLiveActiveReaders); } catch {}
-          });
+          updateLiveActiveReaders(msg.payload.count);
         }
       } catch {}
     };
@@ -1083,10 +1108,6 @@ export const initServerRealtimeSync = () => {
   // 3. Periodic fallback polling every 8 seconds
   setInterval(pullServerSync, 8000);
 };
-
-// Active readers subscribers
-const activeReaderSubscribers = new Set<(count: number) => void>();
-let currentLiveActiveReaders = 1;
 
 // Start sync immediately on client
 if (typeof window !== 'undefined') {
@@ -1176,21 +1197,89 @@ export const recordSiteVisit = async (): Promise<void> => {
 
 /**
  * Realtime Presence Heartbeat: Keeps track of actual active readers online right now.
- * Zero Firestore writes: backed 100% by Server Events, active connections, and memory.
+ * Dual-backed: HTTP presence heartbeats to Server Engine + Firestore reader_presences for multi-instance distributed sync.
  */
 export const startActiveReaderHeartbeat = (onCountChange: (count: number) => void): (() => void) => {
   activeReaderSubscribers.add(onCountChange);
   // Send current cached active count immediately
   onCountChange(Math.max(1, currentLiveActiveReaders));
 
-  // Query server for latest active readers count without writing to Firestore
+  const visitorId = getSessionVisitorId();
+
+  // 1. Send heartbeat to Server Engine & Firestore
+  const sendHeartbeat = () => {
+    // A. Backend Server Heartbeat
+    if (hasBackendServer()) {
+      safeApiFetch('/api/presence/heartbeat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ visitorId }),
+      })
+        .then((res) => (res && res.ok ? res.json() : null))
+        .then((data) => {
+          if (typeof data?.count === 'number') {
+            updateLiveActiveReaders(data.count);
+          }
+        })
+        .catch(() => {});
+    }
+
+    // B. Firestore distributed presence sync across multiple cloud containers
+    if (isFirestoreEnabled() && !checkIsFirestoreBlocked()) {
+      try {
+        const presenceDocRef = doc(db, ACTIVE_PRESENCE_COLLECTION, visitorId);
+        setDoc(
+          presenceDocRef,
+          {
+            visitorId,
+            lastSeen: Date.now(),
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true }
+        ).catch(() => {});
+      } catch {}
+    }
+  };
+
+  // Immediate heartbeat
+  sendHeartbeat();
+
+  // Periodic heartbeat every 20 seconds
+  const heartbeatTimer = setInterval(sendHeartbeat, 20000);
+
+  // Send immediate heartbeat when reader returns to tab / focuses
+  const handleVisibility = () => {
+    if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+      sendHeartbeat();
+    }
+  };
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', handleVisibility);
+  }
+
+  // Gracefully notify leave when reader closes tab
+  const handleLeave = () => {
+    try {
+      if (hasBackendServer() && typeof navigator !== 'undefined' && navigator.sendBeacon) {
+        navigator.sendBeacon(buildApiUrl('/api/presence/leave'), JSON.stringify({ visitorId }));
+      }
+      if (isFirestoreEnabled() && !checkIsFirestoreBlocked()) {
+        deleteDoc(doc(db, ACTIVE_PRESENCE_COLLECTION, visitorId)).catch(() => {});
+      }
+    } catch {}
+  };
+  if (typeof window !== 'undefined') {
+    window.addEventListener('pagehide', handleLeave);
+    window.addEventListener('beforeunload', handleLeave);
+  }
+
+  // 2. Initial check of active readers from server
   if (hasBackendServer()) {
     fetchWithTimeout('/api/active-readers', {}, 2500)
       .then((r) => r.json())
       .then((data) => {
         if (typeof data?.count === 'number') {
-          currentLiveActiveReaders = Math.max(1, data.count);
-          onCountChange(currentLiveActiveReaders);
+          updateLiveActiveReaders(data.count);
         }
       })
       .catch(() => {
@@ -1198,8 +1287,45 @@ export const startActiveReaderHeartbeat = (onCountChange: (count: number) => voi
       });
   }
 
+  // 3. Firestore snapshot for multi-device / distributed instance tracking
+  let unsubFirestorePresence: (() => void) | null = null;
+  if (isFirestoreEnabled() && !checkIsFirestoreBlocked()) {
+    try {
+      const presencesCol = collection(db, ACTIVE_PRESENCE_COLLECTION);
+      unsubFirestorePresence = onSnapshot(
+        presencesCol,
+        (snapshot) => {
+          const now = Date.now();
+          const threshold = now - 55000; // 55 seconds active window
+          let firestoreActive = 0;
+          snapshot.docs.forEach((d) => {
+            const data = d.data();
+            if (data && typeof data.lastSeen === 'number' && data.lastSeen > threshold) {
+              firestoreActive++;
+            }
+          });
+          if (firestoreActive > 0) {
+            updateLiveActiveReaders(Math.max(firestoreActive, currentLiveActiveReaders));
+          }
+        },
+        () => {}
+      );
+    } catch {}
+  }
+
   return () => {
     activeReaderSubscribers.delete(onCountChange);
+    clearInterval(heartbeatTimer);
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', handleVisibility);
+    }
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('pagehide', handleLeave);
+      window.removeEventListener('beforeunload', handleLeave);
+    }
+    if (unsubFirestorePresence) {
+      unsubFirestorePresence();
+    }
   };
 };
 
