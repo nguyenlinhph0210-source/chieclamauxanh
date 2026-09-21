@@ -767,14 +767,6 @@ export const StoryDetailView: React.FC<StoryDetailViewProps> = ({
                       >
                         {formatDateOnly(ch.publishedAt)}
                       </span>
-                      {isRecentlyEdited(ch.publishedAt, ch.updatedAt) && (
-                        <span
-                          className="text-[10px] text-pink-500 dark:text-pink-400 font-medium"
-                          title={`Chương đã được tác giả chỉnh sửa vào: ${formatDateTime(ch.updatedAt)}`}
-                        >
-                          (Đã sửa)
-                        </span>
-                      )}
                       {isExtra && (
                         <span className="text-[10px] font-semibold px-2 py-0.2 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 border border-rose-200/60">
                           🌸 Phiên ngoại {ch.extraNumber ? `#${ch.extraNumber}` : ''}

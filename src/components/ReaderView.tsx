@@ -1064,17 +1064,6 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
             <span title={formatDateTime(chapter.publishedAt)}>
               Đăng: {formatDateOnly(chapter.publishedAt)}
             </span>
-            {isRecentlyEdited(chapter.publishedAt, chapter.updatedAt) && (
-              <>
-                <span>•</span>
-                <span
-                  className="inline-flex items-center gap-1 text-pink-600 dark:text-pink-400 font-medium"
-                  title={`Đã chỉnh sửa nội dung lúc: ${formatDateTime(chapter.updatedAt)}`}
-                >
-                  (Đã sửa {formatRelativeTime(chapter.updatedAt)})
-                </span>
-              </>
-            )}
           </div>
         </div>
 
@@ -2025,9 +2014,6 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
                             <span>{ch.wordCount.toLocaleString()} chữ</span>
                             <span>•</span>
                             <span title={formatDateTime(ch.publishedAt)}>{formatDateOnly(ch.publishedAt)}</span>
-                            {isRecentlyEdited(ch.publishedAt, ch.updatedAt) && (
-                              <span className="text-pink-500 font-medium text-[10px]">(Đã sửa)</span>
-                            )}
                           </div>
                         </div>
                       </div>

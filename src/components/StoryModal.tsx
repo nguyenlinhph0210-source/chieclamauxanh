@@ -503,14 +503,6 @@ export const StoryModal: React.FC<StoryModalProps> = ({
                           >
                             {formatDateOnly(ch.publishedAt)}
                           </span>
-                          {isRecentlyEdited(ch.publishedAt, ch.updatedAt) && (
-                            <span
-                              className="text-[9px] text-pink-500 font-medium"
-                              title={`Chương đã được sửa vào: ${formatDateTime(ch.updatedAt)}`}
-                            >
-                              (Đã sửa)
-                            </span>
-                          )}
                           {isExtra && (
                             <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300">
                               🌸 PN
