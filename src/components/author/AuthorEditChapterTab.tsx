@@ -10,10 +10,21 @@ import {
   Sparkles,
   ChevronRight,
   ChevronLeft,
+  Clock,
+  Calendar,
+  History,
+  RotateCcw,
 } from 'lucide-react';
 import { getStoryChapters } from '../../data/mockData';
 import { publishChapter, deleteChapter, subscribeToStoryChapters } from '../../lib/realtimeService';
 import { RichTextEditor } from '../common/RichTextEditor';
+import {
+  formatDateTime,
+  formatRelativeTime,
+  isoToDateTimeLocal,
+  dateTimeLocalToIso,
+  isRecentlyEdited,
+} from '../../utils/dateUtils';
 
 interface AuthorEditChapterTabProps {
   stories: Story[];
@@ -54,6 +65,9 @@ export const AuthorEditChapterTab: React.FC<AuthorEditChapterTabProps> = ({
   const [isChapterLocked, setIsChapterLocked] = useState(false);
   const [chapterPasswordHint, setChapterPasswordHint] = useState('');
   const [chapterPasswordKey, setChapterPasswordKey] = useState('');
+  const [publishDateInput, setPublishDateInput] = useState('');
+  const [originalPublishedAt, setOriginalPublishedAt] = useState('');
+  const [lastUpdatedAt, setLastUpdatedAt] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -92,6 +106,9 @@ export const AuthorEditChapterTab: React.FC<AuthorEditChapterTabProps> = ({
       setTranslatorNote('');
       setChapterPasswordHint('');
       setChapterPasswordKey('');
+      setPublishDateInput('');
+      setOriginalPublishedAt('');
+      setLastUpdatedAt('');
       return;
     }
 
@@ -107,6 +124,9 @@ export const AuthorEditChapterTab: React.FC<AuthorEditChapterTabProps> = ({
         setIsChapterLocked(Boolean(ch.isLocked));
         setChapterPasswordHint(ch.passwordHint || '');
         setChapterPasswordKey(ch.passwordKey || '');
+        setPublishDateInput(isoToDateTimeLocal(ch.publishedAt || new Date().toISOString()));
+        setOriginalPublishedAt(ch.publishedAt || '');
+        setLastUpdatedAt(ch.updatedAt || '');
         setConfirmDelete(false);
       }
     }
@@ -184,12 +204,18 @@ export const AuthorEditChapterTab: React.FC<AuthorEditChapterTabProps> = ({
     setIsSaving(true);
     try {
       const existingCh = chapters.find((c) => c.id === selectedChapterId);
+      const finalPublishedAt = publishDateInput
+        ? dateTimeLocalToIso(publishDateInput)
+        : existingCh?.publishedAt || new Date().toISOString();
+      const nowIso = new Date().toISOString();
+
       const updatedChapter: Chapter = {
         id: selectedChapterId,
         storyId: selectedStoryId,
         chapterNumber: Number(chapterNumber) || 1,
         title: chapterTitle.trim(),
-        publishedAt: existingCh?.publishedAt || new Date().toISOString(),
+        publishedAt: finalPublishedAt,
+        updatedAt: nowIso,
         isLocked: isChapterLocked,
         passwordHint: isChapterLocked ? chapterPasswordHint.trim() : '',
         passwordKey: isChapterLocked ? chapterPasswordKey.trim().toLowerCase() : '',
@@ -202,6 +228,8 @@ export const AuthorEditChapterTab: React.FC<AuthorEditChapterTabProps> = ({
       };
 
       const pubResult = await publishChapter(updatedChapter);
+      setOriginalPublishedAt(finalPublishedAt);
+      setLastUpdatedAt(nowIso);
       if (pubResult?.github?.attempted) {
         if (pubResult.github.success) {
           onFeedback('success', `Đã lưu cập nhật "${updatedChapter.title}" và đẩy lên GitHub!`);
@@ -485,6 +513,80 @@ export const AuthorEditChapterTab: React.FC<AuthorEditChapterTabProps> = ({
               placeholder="VD: Cảm ơn bạn đọc đã đồng hành cùng bộ truyện..."
               className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 text-xs focus:ring-2 focus:ring-pink-300 focus:outline-hidden"
             />
+          </div>
+
+          {/* Chapter Publication & Edit Time Management */}
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-pink-50/60 via-stone-50 to-rose-50/40 dark:from-stone-850 dark:to-stone-800 border border-pink-200/70 dark:border-stone-700/80 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-pink-500 shrink-0" />
+                <span className="text-xs font-bold text-stone-800 dark:text-stone-100">
+                  Thời gian đăng & Chỉnh sửa chương
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setPublishDateInput(isoToDateTimeLocal(new Date().toISOString()))}
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-white dark:bg-stone-900 border border-pink-200 dark:border-stone-600 text-pink-600 dark:text-pink-300 hover:bg-pink-50 dark:hover:bg-stone-750 transition-colors flex items-center gap-1 cursor-pointer"
+                  title="Đặt thời gian đăng thành thời điểm hiện tại"
+                >
+                  <Clock className="w-3 h-3" />
+                  <span>Đặt thành bây giờ</span>
+                </button>
+                {originalPublishedAt && (
+                  <button
+                    type="button"
+                    onClick={() => setPublishDateInput(isoToDateTimeLocal(originalPublishedAt))}
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-600 text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-750 transition-colors flex items-center gap-1 cursor-pointer"
+                    title="Khôi phục ngày giờ đăng ban đầu"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>Giữ ngày đăng gốc</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-stone-700 dark:text-stone-300 flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5 text-pink-500" />
+                  <span>Tự set / chỉnh sửa thời gian đăng tải:</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  value={publishDateInput}
+                  onChange={(e) => setPublishDateInput(e.target.value)}
+                  className="w-full px-3.5 py-2 rounded-xl border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 text-xs font-medium focus:ring-2 focus:ring-pink-300 focus:outline-hidden"
+                />
+                <span className="text-[10px] text-stone-500 dark:text-stone-400 block">
+                  Hiển thị: {formatDateTime(publishDateInput ? dateTimeLocalToIso(publishDateInput) : originalPublishedAt)} ({formatRelativeTime(publishDateInput ? dateTimeLocalToIso(publishDateInput) : originalPublishedAt)})
+                </span>
+              </div>
+
+              <div className="space-y-1 sm:border-l sm:border-stone-200 dark:sm:border-stone-700 sm:pl-3">
+                <span className="text-xs font-semibold text-stone-700 dark:text-stone-300 flex items-center gap-1">
+                  <History className="w-3.5 h-3.5 text-stone-400" />
+                  <span>Trạng thái chỉnh sửa:</span>
+                </span>
+                <div className="p-2.5 rounded-xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-700/80 text-xs space-y-1">
+                  {isRecentlyEdited(originalPublishedAt, lastUpdatedAt) ? (
+                    <div className="flex items-center gap-1.5 text-pink-600 dark:text-pink-400 font-medium">
+                      <span className="w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
+                      <span>Đã chỉnh sửa: {formatDateTime(lastUpdatedAt)} ({formatRelativeTime(lastUpdatedAt)})</span>
+                    </div>
+                  ) : (
+                    <div className="text-stone-500 dark:text-stone-400 text-[11px]">
+                      Chưa qua chỉnh sửa sau khi đăng tải.
+                    </div>
+                  )}
+                  <p className="text-[10px] text-stone-400 dark:text-stone-500 leading-tight">
+                    * Khi bạn nhấn [Lưu cập nhật], thời gian chỉnh sửa mới nhất sẽ tự động được ghi nhận chuẩn xác.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Content Area with RichTextEditor & Auto-expand */}

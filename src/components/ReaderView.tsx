@@ -15,6 +15,12 @@ import {
 } from '../lib/realtimeService';
 import { useAuth } from '../lib/authContext';
 import {
+  formatDateTime,
+  formatDateOnly,
+  formatRelativeTime,
+  isRecentlyEdited,
+} from '../utils/dateUtils';
+import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -1055,7 +1061,20 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
             <span>•</span>
             <span>{chapter.wordCount.toLocaleString()} chữ</span>
             <span>•</span>
-            <span>{chapter.publishedAt}</span>
+            <span title={formatDateTime(chapter.publishedAt)}>
+              Đăng: {formatDateOnly(chapter.publishedAt)}
+            </span>
+            {isRecentlyEdited(chapter.publishedAt, chapter.updatedAt) && (
+              <>
+                <span>•</span>
+                <span
+                  className="inline-flex items-center gap-1 text-pink-600 dark:text-pink-400 font-medium"
+                  title={`Đã chỉnh sửa nội dung lúc: ${formatDateTime(chapter.updatedAt)}`}
+                >
+                  (Đã sửa {formatRelativeTime(chapter.updatedAt)})
+                </span>
+              </>
+            )}
           </div>
         </div>
 
@@ -2005,7 +2024,10 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
                           <div className={`flex items-center gap-2 text-[11px] mt-0.5 ${currentTheme.subtextColor}`}>
                             <span>{ch.wordCount.toLocaleString()} chữ</span>
                             <span>•</span>
-                            <span>{ch.publishedAt}</span>
+                            <span title={formatDateTime(ch.publishedAt)}>{formatDateOnly(ch.publishedAt)}</span>
+                            {isRecentlyEdited(ch.publishedAt, ch.updatedAt) && (
+                              <span className="text-pink-500 font-medium text-[10px]">(Đã sửa)</span>
+                            )}
                           </div>
                         </div>
                       </div>

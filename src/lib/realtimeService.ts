@@ -3470,6 +3470,7 @@ export const publishStory = async (story: Story): Promise<{
     hasPassword: Boolean(story.hasPassword),
     passwordHint: (story.passwordHint || '').trim(),
     passwordKey: (story.passwordKey || '').trim().toLowerCase(),
+    publishedAt: story.publishedAt || (story.updatedAt && !story.updatedAt.startsWith('Vừa') ? story.updatedAt : nowIso),
     updatedAt: nowIso,
     views: Number(story.views) || 0,
     likes: Number(story.likes) || 0,

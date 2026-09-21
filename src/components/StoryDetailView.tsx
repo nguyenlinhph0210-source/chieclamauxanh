@@ -2,6 +2,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Story, Chapter, RealtimeComment } from '../types';
 import { RichTextRenderer } from './common/RichTextRenderer';
 import {
+  formatDateTime,
+  formatDateOnly,
+  formatRelativeTime,
+  isRecentlyEdited,
+} from '../utils/dateUtils';
+import {
   ArrowLeft,
   BookOpen,
   CheckCircle,
@@ -493,6 +499,24 @@ export const StoryDetailView: React.FC<StoryDetailViewProps> = ({
               </div>
             </div>
 
+            {/* Story publication & update time */}
+            {(story.publishedAt || story.updatedAt) && (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-stone-500 dark:text-stone-400">
+                {story.publishedAt && (
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3 h-3 text-pink-500" />
+                    <span>Đăng: <strong className="font-medium text-stone-700 dark:text-stone-300">{formatDateOnly(story.publishedAt)}</strong></span>
+                  </span>
+                )}
+                {story.updatedAt && (
+                  <span className="flex items-center gap-1">
+                    <span>•</span>
+                    <span>Cập nhật: <strong className="font-medium text-stone-700 dark:text-stone-300">{formatRelativeTime(story.updatedAt)}</strong></span>
+                  </span>
+                )}
+              </div>
+            )}
+
             {/* Realtime Live Stats Bar */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3 rounded-2xl bg-pink-50/60 dark:bg-stone-900/60 border border-pink-200/60 dark:border-stone-700 text-xs font-sans">
               <div className="flex items-center gap-2">
@@ -737,9 +761,20 @@ export const StoryDetailView: React.FC<StoryDetailViewProps> = ({
                 >
                   <div className="space-y-1 flex-1 truncate">
                     <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-mono text-stone-400 group-hover:text-pink-500">
-                        {ch.publishedAt}
+                      <span
+                        className="text-[11px] font-mono text-stone-400 group-hover:text-pink-500"
+                        title={formatDateTime(ch.publishedAt)}
+                      >
+                        {formatDateOnly(ch.publishedAt)}
                       </span>
+                      {isRecentlyEdited(ch.publishedAt, ch.updatedAt) && (
+                        <span
+                          className="text-[10px] text-pink-500 dark:text-pink-400 font-medium"
+                          title={`Chương đã được tác giả chỉnh sửa vào: ${formatDateTime(ch.updatedAt)}`}
+                        >
+                          (Đã sửa)
+                        </span>
+                      )}
                       {isExtra && (
                         <span className="text-[10px] font-semibold px-2 py-0.2 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 border border-rose-200/60">
                           🌸 Phiên ngoại {ch.extraNumber ? `#${ch.extraNumber}` : ''}

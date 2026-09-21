@@ -34,6 +34,8 @@ import {
   Search,
   Plus,
   Database,
+  Clock,
+  Calendar,
 } from 'lucide-react';
 import {
   publishStory,
@@ -57,6 +59,7 @@ import { AuthorCollaboratorsTab } from './author/AuthorCollaboratorsTab';
 import { AuthorSyncTab } from './author/AuthorSyncTab';
 import { AuthorCommentsTab } from './author/AuthorCommentsTab';
 import { getCustomGenres, subscribeToCustomGenres, getStoryGenres, addCustomGenre } from '../utils/genreManager';
+import { isoToDateTimeLocal, dateTimeLocalToIso } from '../utils/dateUtils';
 
 interface AuthorPublishModalProps {
   isOpen: boolean;
@@ -183,6 +186,7 @@ export const AuthorPublishModal: React.FC<AuthorPublishModalProps> = ({
   const [passwordHint, setPasswordHint] = useState('');
   const [passwordKey, setPasswordKey] = useState('');
   const [totalChapters, setTotalChapters] = useState(30);
+  const [storyPublishDateInput, setStoryPublishDateInput] = useState(() => isoToDateTimeLocal(new Date().toISOString()));
 
   // New Chapter Form State
   const [targetStoryId, setTargetStoryId] = useState(stories[0]?.id || '');
@@ -194,6 +198,7 @@ export const AuthorPublishModal: React.FC<AuthorPublishModalProps> = ({
   const [isChapterLocked, setIsChapterLocked] = useState(false);
   const [chapterPasswordHint, setChapterPasswordHint] = useState('');
   const [chapterPasswordKey, setChapterPasswordKey] = useState('');
+  const [chapterPublishDateInput, setChapterPublishDateInput] = useState(() => isoToDateTimeLocal(new Date().toISOString()));
 
   // Sync targetStoryId if stories list updates
   useEffect(() => {
@@ -293,6 +298,10 @@ export const AuthorPublishModal: React.FC<AuthorPublishModalProps> = ({
           .replace(/[^a-z0-9]+/g, '-')
           .replace(/^-+|-+$/g, '') || `truyen-${Date.now()}`;
 
+      const finalStoryPub = storyPublishDateInput
+        ? dateTimeLocalToIso(storyPublishDateInput)
+        : new Date().toISOString();
+
       const newStory: Story = {
         id: generatedId,
         title: storyTitle.trim(),
@@ -311,7 +320,8 @@ export const AuthorPublishModal: React.FC<AuthorPublishModalProps> = ({
         hasPassword,
         passwordHint: hasPassword ? passwordHint.trim() : '',
         passwordKey: hasPassword ? passwordKey.trim().toLowerCase() : '',
-        updatedAt: 'Vừa đăng',
+        publishedAt: finalStoryPub,
+        updatedAt: finalStoryPub,
         views: 0,
         likes: 0,
         featured: true,
@@ -358,12 +368,17 @@ export const AuthorPublishModal: React.FC<AuthorPublishModalProps> = ({
     setIsProcessing(true);
     try {
       const chapterId = `${effectiveStoryId}-${partType === 'extra' ? 'extra' : 'c'}${chapterNumber}`;
+      const finalChapterPub = chapterPublishDateInput
+        ? dateTimeLocalToIso(chapterPublishDateInput)
+        : new Date().toISOString();
+
       const newChapter: Chapter = {
         id: chapterId,
         storyId: effectiveStoryId,
         chapterNumber: Number(chapterNumber) || 1,
         title: effectiveTitle,
-        publishedAt: new Date().toISOString(),
+        publishedAt: finalChapterPub,
+        updatedAt: finalChapterPub,
         isLocked: isChapterLocked,
         passwordHint: isChapterLocked ? chapterPasswordHint.trim() : '',
         passwordKey: isChapterLocked ? chapterPasswordKey.trim().toLowerCase() : '',
@@ -1125,6 +1140,29 @@ export const AuthorPublishModal: React.FC<AuthorPublishModalProps> = ({
                 )}
               </div>
 
+              {/* Set Publication Time */}
+              <div className="p-3.5 rounded-2xl bg-stone-50 dark:bg-stone-850 border border-stone-200 dark:border-stone-700/80 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-stone-700 dark:text-stone-300 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-pink-500" />
+                    <span>Thời gian đăng tác phẩm:</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setStoryPublishDateInput(isoToDateTimeLocal(new Date().toISOString()))}
+                    className="text-[11px] text-pink-600 dark:text-pink-400 hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Đặt thành thời gian hiện tại</span>
+                  </button>
+                </div>
+                <input
+                  type="datetime-local"
+                  value={storyPublishDateInput}
+                  onChange={(e) => setStoryPublishDateInput(e.target.value)}
+                  className="w-full px-3.5 py-2 rounded-xl border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 text-xs font-medium focus:ring-2 focus:ring-pink-300 focus:outline-hidden"
+                />
+              </div>
+
               <div className="flex justify-end pt-2">
                 <button
                   type="submit"
@@ -1282,6 +1320,29 @@ export const AuthorPublishModal: React.FC<AuthorPublishModalProps> = ({
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Set Publication Time for Chapter */}
+              <div className="p-3.5 rounded-2xl bg-stone-50 dark:bg-stone-850 border border-stone-200 dark:border-stone-700/80 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-stone-700 dark:text-stone-300 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-pink-500" />
+                    <span>Thời gian đăng chương:</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setChapterPublishDateInput(isoToDateTimeLocal(new Date().toISOString()))}
+                    className="text-[11px] text-pink-600 dark:text-pink-400 hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Đặt thành thời gian hiện tại</span>
+                  </button>
+                </div>
+                <input
+                  type="datetime-local"
+                  value={chapterPublishDateInput}
+                  onChange={(e) => setChapterPublishDateInput(e.target.value)}
+                  className="w-full px-3.5 py-2 rounded-xl border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 text-xs font-medium focus:ring-2 focus:ring-pink-300 focus:outline-hidden"
+                />
               </div>
 
               <div className="flex justify-end pt-2">

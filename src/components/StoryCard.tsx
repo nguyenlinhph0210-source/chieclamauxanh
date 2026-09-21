@@ -5,6 +5,7 @@ import { BookOpen, Eye, Heart, Sparkles, Key, CheckCircle, Clock, Star, Share2 }
 import { getStoryChapters } from '../data/mockData';
 import { subscribeToStoryStats, subscribeToStoryChapters, toggleStoryLike, recordStoryView } from '../lib/realtimeService';
 import { stripRichText } from './common/RichTextRenderer';
+import { formatDateTime, formatDateOnly, formatRelativeTime } from '../utils/dateUtils';
 
 interface StoryCardProps {
   story: Story;
@@ -248,11 +249,15 @@ export const StoryCard: React.FC<StoryCardProps> = ({ story, onOpenStory, onSele
               </span>{' '}
               chương
             </div>
-            {Boolean(story.extraChaptersCount) && (
-              <span className="text-[10px] text-pink-600 dark:text-pink-400 block">
-                {story.mainChaptersCount || 40} chính + {story.extraChaptersCount} ngoại
+            {story.updatedAt ? (
+              <span className="text-[10px] text-stone-400 block" title={formatDateTime(story.updatedAt)}>
+                {formatRelativeTime(story.updatedAt)}
               </span>
-            )}
+            ) : story.publishedAt ? (
+              <span className="text-[10px] text-stone-400 block" title={formatDateTime(story.publishedAt)}>
+                {formatDateOnly(story.publishedAt)}
+              </span>
+            ) : null}
           </div>
 
           <div className="flex items-center gap-2">

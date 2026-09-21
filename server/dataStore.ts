@@ -523,9 +523,11 @@ export const getStoryById = (id: string): Story | undefined => {
 };
 
 export const saveStory = (story: Story): Story => {
+  const nowIso = new Date().toISOString();
   const storyWithTime: Story = {
     ...story,
-    updatedAt: story.updatedAt || new Date().toISOString(),
+    publishedAt: story.publishedAt || nowIso,
+    updatedAt: (story.updatedAt && story.updatedAt !== 'Vừa đăng' && story.updatedAt !== 'Vừa cập nhật') ? story.updatedAt : nowIso,
   };
   const filtered = cachedStories.filter((s) => s.id !== story.id);
   cachedStories = sortStoriesByLatest([storyWithTime, ...filtered]);
@@ -571,15 +573,22 @@ export const saveChapter = (chapter: Chapter): Chapter => {
   const storyId = chapter.storyId;
   const list = cachedChapters[storyId] ? [...cachedChapters[storyId]] : [];
   
-  const targetPart = chapter.partType || (chapter.isExtra ? 'extra' : 'main');
+  const nowIso = new Date().toISOString();
+  const cleanChapter: Chapter = {
+    ...chapter,
+    publishedAt: chapter.publishedAt || nowIso,
+    updatedAt: chapter.updatedAt || nowIso,
+  };
+
+  const targetPart = cleanChapter.partType || (cleanChapter.isExtra ? 'extra' : 'main');
   const existingIdx = list.findIndex((c) => {
     const cPart = c.partType || (c.isExtra ? 'extra' : 'main');
-    return c.id === chapter.id || (c.chapterNumber === chapter.chapterNumber && cPart === targetPart);
+    return c.id === cleanChapter.id || (c.chapterNumber === cleanChapter.chapterNumber && cPart === targetPart);
   });
   if (existingIdx >= 0) {
-    list[existingIdx] = { ...list[existingIdx], ...chapter };
+    list[existingIdx] = { ...list[existingIdx], ...cleanChapter };
   } else {
-    list.push(chapter);
+    list.push(cleanChapter);
   }
 
   list.sort((a, b) => a.chapterNumber - b.chapterNumber);
@@ -590,12 +599,12 @@ export const saveChapter = (chapter: Chapter): Chapter => {
   const storyIdx = cachedStories.findIndex((s) => s.id === storyId);
   if (storyIdx >= 0) {
     cachedStories[storyIdx].completedChapters = list.length;
-    cachedStories[storyIdx].updatedAt = new Date().toISOString();
+    cachedStories[storyIdx].updatedAt = nowIso;
     cachedStories = sortStoriesByLatest(cachedStories);
     writeJsonSafe(STORIES_FILE, cachedStories);
   }
 
-  return chapter;
+  return cleanChapter;
 };
 
 export const deleteChapter = (storyId: string, chapterId: string): boolean => {

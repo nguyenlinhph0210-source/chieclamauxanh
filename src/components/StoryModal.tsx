@@ -24,6 +24,12 @@ import {
   toggleStoryFollow,
   recordStoryView,
 } from '../lib/realtimeService';
+import {
+  formatDateTime,
+  formatDateOnly,
+  formatRelativeTime,
+  isRecentlyEdited,
+} from '../utils/dateUtils';
 
 interface StoryModalProps {
   story: Story | null;
@@ -491,7 +497,20 @@ export const StoryModal: React.FC<StoryModalProps> = ({
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] font-mono text-stone-400">{ch.publishedAt}</span>
+                          <span
+                            className="text-[10px] font-mono text-stone-400"
+                            title={formatDateTime(ch.publishedAt)}
+                          >
+                            {formatDateOnly(ch.publishedAt)}
+                          </span>
+                          {isRecentlyEdited(ch.publishedAt, ch.updatedAt) && (
+                            <span
+                              className="text-[9px] text-pink-500 font-medium"
+                              title={`Chương đã được sửa vào: ${formatDateTime(ch.updatedAt)}`}
+                            >
+                              (Đã sửa)
+                            </span>
+                          )}
                           {isExtra && (
                             <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300">
                               🌸 PN

@@ -17,6 +17,7 @@ export interface Story {
   passwordHint?: string;
   passwordKey?: string;
   updatedAt: string;
+  publishedAt?: string;
   views: number;
   likes: number;
   featured?: boolean;
