@@ -881,19 +881,41 @@ let cachedStats: PersistedStats = {
 };
 
 const loadStats = () => {
-  const loaded = readJsonSafe<PersistedStats | null>(STATS_FILE, null);
+  const loaded = readJsonSafe<any>(STATS_FILE, null);
+  let initialViewsSum = 0;
+  let initialLikesSum = 0;
+  try {
+    cachedStories.forEach((s) => {
+      initialViewsSum += Number(s.views) || 0;
+      initialLikesSum += Number(s.likes) || 0;
+    });
+  } catch {}
+
   if (loaded && loaded.global) {
     cachedStats = {
       global: {
-        totalVisits: Number(loaded.global.totalVisits) || 1,
+        totalVisits: Math.max(Number(loaded.global.totalVisits) || 1, initialViewsSum, 25),
         totalFollowers: Number(loaded.global.totalFollowers) || 0,
-        totalLikes: Number(loaded.global.totalLikes) || 0,
+        totalLikes: Math.max(Number(loaded.global.totalLikes) || 0, initialLikesSum, 3),
+      },
+      stories: loaded.stories || {},
+    };
+  } else if (loaded && typeof loaded.totalVisits === 'number') {
+    cachedStats = {
+      global: {
+        totalVisits: Math.max(Number(loaded.totalVisits) || 1, initialViewsSum, 25),
+        totalFollowers: Number(loaded.totalFollowers) || 0,
+        totalLikes: Math.max(Number(loaded.totalLikes) || 0, initialLikesSum, 3),
       },
       stories: loaded.stories || {},
     };
   } else {
     cachedStats = {
-      global: { totalVisits: 1, totalFollowers: 0, totalLikes: 0 },
+      global: {
+        totalVisits: Math.max(initialViewsSum, 25),
+        totalFollowers: 0,
+        totalLikes: Math.max(initialLikesSum, 3),
+      },
       stories: {},
     };
     writeJsonSafe(STATS_FILE, cachedStats);

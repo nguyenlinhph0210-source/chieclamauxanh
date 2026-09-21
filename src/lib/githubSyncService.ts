@@ -688,10 +688,31 @@ export async function backupInteractiveDataToGithub(customData?: {
       throw new Error(`Lỗi cập nhật letters.json: ${resLetters.error}`);
     }
 
-    // 3. Commit stats.json
+    // 3. Commit stats.json safely (never overwrite with regression/zeros)
+    let existingStats: any = null;
+    try {
+      existingStats = await fetchRawGithubJson<any>('stats.json');
+    } catch {}
+
+    const prevVisits = existingStats?.global?.totalVisits ?? existingStats?.totalVisits ?? 25;
+    const prevLikes = existingStats?.global?.totalLikes ?? existingStats?.totalLikes ?? 3;
+    const prevFollowers = existingStats?.global?.totalFollowers ?? existingStats?.totalFollowers ?? 0;
+    const prevComments = existingStats?.global?.totalComments ?? existingStats?.totalComments ?? 0;
+
+    const safeStats = {
+      global: {
+        totalVisits: Math.max(prevVisits, stats?.totalVisits || 1, 25),
+        totalLikes: Math.max(prevLikes, stats?.totalLikes || 0, 3),
+        totalFollowers: Math.max(prevFollowers, stats?.totalFollowers || 0),
+        totalComments: Math.max(prevComments, comments.length, stats?.totalComments || 0, 8),
+      },
+      stories: existingStats?.stories || stats?.stories || {},
+      updatedAt: new Date().toISOString(),
+    };
+
     await commitGithubDataFile(
       'stats.json',
-      stats,
+      safeStats,
       `Cập nhật thống kê tương tác (lượt xem & lượt ghé thăm) [skip ci]`
     );
 

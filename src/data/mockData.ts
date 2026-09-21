@@ -1,6 +1,4 @@
 import { Story, Chapter, Announcement, RecentUpdate } from '../types';
-import defaultStoriesJson from '../../data/stories.json';
-import defaultChaptersJson from '../../data/chapters.json';
 
 export const DELETED_OR_LEGACY_STORY_IDS = new Set([
   'anh-dao-nam-centimet',
@@ -108,25 +106,63 @@ export const recordStoryDeleted = (storyId: string): void => {
   delete liveChaptersRuntimeCache[cleanId];
 };
 
-const parseDefaultStories = (): Story[] => {
-  if (Array.isArray(defaultStoriesJson) && defaultStoriesJson.length > 0) {
-    return (defaultStoriesJson as unknown as Story[]).filter(
-      (s) => s && s.id && !DELETED_OR_LEGACY_STORY_IDS.has(s.id)
-    );
-  }
-  return [];
+export const STORIES: Story[] = [
+  {
+    id: 'khac-ten-anh-len-bia-mo-cua-em',
+    title: 'Khắc tên anh lên bia mộ của em',
+    originalTitle: '',
+    author: 'Khúc Tiểu Khúc',
+    translator: 'Mellifluous',
+    status: 'ongoing',
+    genre: ['Ngôn tình', 'Hiện đại', 'Chữa lành', 'Trưởng thành'],
+    summary:
+      'Năm 14 tuổi, Hà Ỷ Nguyệt tự tay giết một người, đem chôn dưới gốc cây quýt. Trong suốt 10 năm, linh hồn ấy chưa từng rời bỏ cô.\n\n— 《Sổ tay trưởng thành và chữa lành của Ma nữ tâm thần》\n\nKẻ dã tâm dịu dàng nhưng lạnh máu\nx Tiểu thư “Ma nữ”\n\n\nBẢN DỊCH ĐÃ CÓ SỰ CHO PHÉP CỦA TÁC GIẢ VỚI MỤC ĐÍCH PHI LỢI NHUẬN',
+    totalChapters: 50,
+    completedChapters: 0,
+    mainChaptersCount: 50,
+    extraChaptersCount: 0,
+    coverImage:
+      'https://betterthanyesterday027.wordpress.com/wp-content/uploads/2026/08/1786050443632_715508071678974254_1563017434591451251_372de2d8a206ad605c7c1f07616a654c-1.jpg',
+    colorTheme: 'from-pink-100 to-rose-200 dark:from-pink-950/40 dark:to-rose-900/40',
+    hasPassword: false,
+    passwordHint: '',
+    passwordKey: '',
+    updatedAt: '2026-09-18T06:33:19.040Z',
+    views: 0,
+    likes: 0,
+    featured: true,
+  },
+  {
+    id: 'huong-dan-lang-phi-tinh-yeu',
+    title: 'Hướng dẫn lãng phí tình yêu',
+    originalTitle: '',
+    author: 'Quy Ngư',
+    translator: 'Mellifluous',
+    status: 'ongoing',
+    genre: ['Ngôn tình', 'Hiện đại', 'Đô thị', 'Yêu thầm', 'Trưởng thành', 'Chậm rãi'],
+    summary:
+      'Sau này, mỗi lần nghĩ đến núi Phú Sĩ, điều đầu tiên hiện lên trong tâm trí không phải là tuyết, không phải Trần Dịch Tấn, cũng chẳng phải bức tranh 《Sóng lừng ngoài khơi Kanagawa》, mà là đôi mắt ngập tràn vẻ ngái ngủ ấy.\n\nThật muốn nghe anh nói một câu, vĩnh hằng không phải là điều bất khả thi.\n\n\nVài lời\n\n1. Thiên về dòng tình cảm thuần túy, không có nhiều tuyến cốt truyện, văn phong có chút sến sẩm.\n\n2. Nhân vật không hoàn hảo, tuyến tình cảm của nữ chính rất sâu sắc, tuyến tình cảm của nam 9 hơi nhạt nhòa. Cảm giác nu9 sâu đậm hơn còn na9 thì khá thờơ.\n\n3. Chính văn OE, ngoại truyện HE, xin hãy nhìn nhận chính văn và ngoại truyện một cách độc lập.\n\n4. Tình dục và tình yêu\n\nBẢN DỊCH CÓ SỰ CHO PHÉP CỦA TÁC GIẢ VỚI MỤC ĐÍCH PHI LỢI NHUẬN',
+    totalChapters: 66,
+    completedChapters: 0,
+    mainChaptersCount: 66,
+    extraChaptersCount: 0,
+    coverImage:
+      'https://betterthanyesterday027.wordpress.com/wp-content/uploads/2026/08/219fc72b-740d-497d-81dd-79fe1b285e48-1-edited.png',
+    colorTheme: 'from-pink-100 to-rose-200 dark:from-pink-950/40 dark:to-rose-900/40',
+    hasPassword: false,
+    passwordHint: '',
+    passwordKey: '',
+    updatedAt: '2026-09-18T06:07:23.123Z',
+    views: 0,
+    likes: 0,
+    featured: true,
+  },
+];
+
+export const SAMPLE_CHAPTERS: Record<string, Chapter[]> = {
+  'khac-ten-anh-len-bia-mo-cua-em': [],
+  'huong-dan-lang-phi-tinh-yeu': [],
 };
-
-const parseDefaultChapters = (): Record<string, Chapter[]> => {
-  if (defaultChaptersJson && typeof defaultChaptersJson === 'object') {
-    return defaultChaptersJson as unknown as Record<string, Chapter[]>;
-  }
-  return {};
-};
-
-export const STORIES: Story[] = parseDefaultStories();
-
-export const SAMPLE_CHAPTERS: Record<string, Chapter[]> = parseDefaultChapters();
 
 /**
  * Get stored custom chapters from localStorage for a specific story.

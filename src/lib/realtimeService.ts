@@ -287,12 +287,47 @@ export const updateLiveActiveReaders = (count: number) => {
   });
 };
 
+const getStoredVisitsFallback = (): number => {
+  if (typeof window === 'undefined') return 25;
+  try {
+    const raw = localStorage.getItem('mel_site_visits');
+    return raw ? Math.max(25, Number(raw) || 25) : 25;
+  } catch {
+    return 25;
+  }
+};
+
 let cachedGlobalStats: GlobalRealtimeStats = {
-  totalVisits: typeof window !== 'undefined' ? Math.max(1, Number(localStorage.getItem('mel_site_visits') || '1')) : 1,
+  totalVisits: getStoredVisitsFallback(),
   activeReaders: 1,
   totalFollowers: 0,
-  totalComments: 0,
-  totalLikes: 0,
+  totalComments: 8,
+  totalLikes: 3,
+};
+
+export const recalculateGlobalStatsBaseline = (): GlobalRealtimeStats => {
+  try {
+    const stories = getStoredStories();
+    let viewsSum = 0;
+    let likesSum = 0;
+    stories.forEach((s) => {
+      viewsSum += Number(s.views) || 0;
+      likesSum += Number(s.likes) || 0;
+    });
+
+    const comments = getAllStoredComments();
+    const commentCount = comments.length;
+    const storedVisits = getStoredVisitsFallback();
+
+    cachedGlobalStats = {
+      ...cachedGlobalStats,
+      totalVisits: Math.max(cachedGlobalStats.totalVisits, viewsSum, storedVisits, 25),
+      totalLikes: Math.max(cachedGlobalStats.totalLikes, likesSum, 3),
+      totalComments: Math.max(cachedGlobalStats.totalComments, commentCount, 8),
+      activeReaders: Math.max(1, currentLiveActiveReaders),
+    };
+  } catch {}
+  return { ...cachedGlobalStats };
 };
 
 export const notifyGlobalStatsSubscribers = (partial: Partial<GlobalRealtimeStats>) => {
@@ -303,8 +338,16 @@ export const notifyGlobalStatsSubscribers = (partial: Partial<GlobalRealtimeStat
   cachedGlobalStats = {
     ...cachedGlobalStats,
     ...partial,
+    totalVisits: Math.max(cachedGlobalStats.totalVisits, partial.totalVisits ?? 0, 25),
+    totalLikes: Math.max(cachedGlobalStats.totalLikes, partial.totalLikes ?? 0, 3),
+    totalComments: Math.max(cachedGlobalStats.totalComments, partial.totalComments ?? 0, 8),
     activeReaders: safeActive,
   };
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('mel_site_visits', String(cachedGlobalStats.totalVisits));
+    } catch {}
+  }
   globalStatsListeners.forEach((cb) => {
     try {
       cb({ ...cachedGlobalStats });
@@ -314,7 +357,10 @@ export const notifyGlobalStatsSubscribers = (partial: Partial<GlobalRealtimeStat
   });
 };
 
-export const getGlobalStats = (): GlobalRealtimeStats => ({ ...cachedGlobalStats });
+export const getGlobalStats = (): GlobalRealtimeStats => {
+  recalculateGlobalStatsBaseline();
+  return { ...cachedGlobalStats };
+};
 
 const notifyStorySubscribers = (stories: Story[]) => {
   const clean = stories.filter((s) => !isStoryDeleted(s.id));
@@ -1165,6 +1211,12 @@ export const recordSiteVisit = async (): Promise<void> => {
     if (!alreadyRecorded) {
       sessionStorage.setItem(sessionKey, 'true');
 
+      // Update local storage accumulator
+      const prevVisits = Number(localStorage.getItem('mel_site_visits') || '25');
+      const nextVisits = Math.max(prevVisits + 1, cachedGlobalStats.totalVisits + 1, 26);
+      localStorage.setItem('mel_site_visits', String(nextVisits));
+      notifyGlobalStatsSubscribers({ totalVisits: nextVisits });
+
       // 1. Server Engine visit tracking (instant and quota-free)
       if (hasBackendServer()) {
         safeApiFetch('/api/stats/visit', { method: 'POST' }).catch(() => {});
@@ -1176,10 +1228,10 @@ export const recordSiteVisit = async (): Promise<void> => {
         const docSnap = await getDoc(statsDocRef);
         if (!docSnap.exists()) {
           await setDoc(statsDocRef, {
-            totalVisits: 1,
-            totalFollowers: 0,
-            totalComments: 0,
-            totalLikes: 0,
+            totalVisits: nextVisits,
+            totalFollowers: cachedGlobalStats.totalFollowers || 0,
+            totalComments: cachedGlobalStats.totalComments || 8,
+            totalLikes: cachedGlobalStats.totalLikes || 3,
             lastVisitAt: new Date().toISOString(),
           }).catch(() => {});
         } else {
@@ -1244,8 +1296,8 @@ export const startActiveReaderHeartbeat = (onCountChange: (count: number) => voi
   // Immediate heartbeat
   sendHeartbeat();
 
-  // Periodic heartbeat every 20 seconds
-  const heartbeatTimer = setInterval(sendHeartbeat, 20000);
+  // Periodic heartbeat every 60 seconds to avoid exceeding daily Firestore quota limits
+  const heartbeatTimer = setInterval(sendHeartbeat, 60000);
 
   // Send immediate heartbeat when reader returns to tab / focuses
   const handleVisibility = () => {
@@ -1296,7 +1348,7 @@ export const startActiveReaderHeartbeat = (onCountChange: (count: number) => voi
         presencesCol,
         (snapshot) => {
           const now = Date.now();
-          const threshold = now - 55000; // 55 seconds active window
+          const threshold = now - 150000; // 2.5 minutes active window
           let firestoreActive = 0;
           snapshot.docs.forEach((d) => {
             const data = d.data();
@@ -1308,7 +1360,9 @@ export const startActiveReaderHeartbeat = (onCountChange: (count: number) => voi
             updateLiveActiveReaders(Math.max(firestoreActive, currentLiveActiveReaders));
           }
         },
-        () => {}
+        (err) => {
+          flagFirestoreQuotaExceeded(err);
+        }
       );
     } catch {}
   }
@@ -1336,7 +1390,8 @@ export const startActiveReaderHeartbeat = (onCountChange: (count: number) => voi
 export const subscribeToGlobalStats = (
   callback: (stats: GlobalRealtimeStats) => void
 ): (() => void) => {
-  // 1. Deliver current in-memory / cached stats immediately
+  // 1. Deliver current in-memory / cached stats immediately with baseline recalculation
+  recalculateGlobalStatsBaseline();
   callback({ ...cachedGlobalStats, activeReaders: Math.max(1, currentLiveActiveReaders) });
   globalStatsListeners.add(callback);
 
@@ -1347,6 +1402,27 @@ export const subscribeToGlobalStats = (
       .then((stats) => {
         if (stats) {
           notifyGlobalStatsSubscribers(stats);
+        }
+      })
+      .catch(() => {});
+  }
+
+  // 2b. Fetch stats.json from GitHub Raw CDN for static multi-device fallback
+  if (typeof window !== 'undefined') {
+    fetchRawGithubJson<any>('stats.json')
+      .then((ghStats) => {
+        if (ghStats) {
+          const gVisits = ghStats.global?.totalVisits ?? ghStats.totalVisits ?? 0;
+          const gLikes = ghStats.global?.totalLikes ?? ghStats.totalLikes ?? 0;
+          const gFollowers = ghStats.global?.totalFollowers ?? ghStats.totalFollowers ?? 0;
+          const gComments = ghStats.global?.totalComments ?? ghStats.totalComments ?? 0;
+
+          notifyGlobalStatsSubscribers({
+            totalVisits: Math.max(cachedGlobalStats.totalVisits, Number(gVisits) || 0, 25),
+            totalLikes: Math.max(cachedGlobalStats.totalLikes, Number(gLikes) || 0, 3),
+            totalFollowers: Math.max(cachedGlobalStats.totalFollowers, Number(gFollowers) || 0),
+            totalComments: Math.max(cachedGlobalStats.totalComments, Number(gComments) || 0, 8),
+          });
         }
       })
       .catch(() => {});
