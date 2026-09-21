@@ -184,3 +184,32 @@
 .animate-dropdown-in {
   animation: dropdownSlideDown 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* =========================================================================
+   CHAPTER CONTENT ANTI-COPY & RIGHT-CLICK PROTECTION
+   ========================================================================= */
+.reader-prose-protected,
+.reader-prose-protected * {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+}
+
+.reader-prose-protected ::selection {
+  background: transparent !important;
+  color: inherit !important;
+}
+
+.reader-prose-protected::-moz-selection {
+  background: transparent !important;
+  color: inherit !important;
+}
+
+@media print {
+  .reader-prose-protected,
+  .reader-prose {
+    display: none !important;
+  }
+}

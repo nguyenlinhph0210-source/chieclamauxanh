@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Story, Chapter, RealtimeComment } from '../types';
 import { isStoryDeleted } from '../data/mockData';
 import { RichTextRenderer } from './common/RichTextRenderer';
@@ -52,6 +52,7 @@ import {
   Reply,
   Trash2,
   ShieldCheck,
+  ShieldAlert,
   User as UserIcon,
 } from 'lucide-react';
 
@@ -320,6 +321,71 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
 
   const contentRef = useRef<HTMLDivElement>(null);
   const currentTheme = READER_THEMES[themeKey] || READER_THEMES.default;
+
+  // Anti-copy & Right-click protection state & handler for chapter content
+  const [copyWarning, setCopyWarning] = useState<string | null>(null);
+  const copyWarningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const triggerCopyProtection = useCallback((e?: React.SyntheticEvent | Event) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    // Remove any user text selection attempt
+    try {
+      if (window.getSelection) {
+        window.getSelection()?.removeAllRanges();
+      }
+    } catch {}
+
+    if (copyWarningTimeoutRef.current) {
+      clearTimeout(copyWarningTimeoutRef.current);
+    }
+    setCopyWarning('Nội dung chương truyện được bảo vệ bản quyền bởi Mellifluous. Vui lòng không sao chép!');
+    copyWarningTimeoutRef.current = setTimeout(() => {
+      setCopyWarning(null);
+    }, 2800);
+  }, []);
+
+  // Intercept keyboard shortcuts (Ctrl+C, Cmd+C, Ctrl+X, Cmd+X, Ctrl+A, Cmd+A, etc.)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      // Allow shortcuts inside input / textarea (e.g. comment box, pass box)
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+
+      const isModifier = e.ctrlKey || e.metaKey;
+      if (isModifier) {
+        const key = e.key.toLowerCase();
+        if (key === 'c' || key === 'x' || key === 'a' || key === 'u' || key === 's') {
+          triggerCopyProtection(e);
+        }
+      }
+    };
+
+    const handleCopyCut = (e: ClipboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+      triggerCopyProtection(e);
+    };
+
+    window.addEventListener('keydown', handleKeyDown, true);
+    document.addEventListener('copy', handleCopyCut, true);
+    document.addEventListener('cut', handleCopyCut, true);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, true);
+      document.removeEventListener('copy', handleCopyCut, true);
+      document.removeEventListener('cut', handleCopyCut, true);
+      if (copyWarningTimeoutRef.current) {
+        clearTimeout(copyWarningTimeoutRef.current);
+      }
+    };
+  }, [triggerCopyProtection]);
 
   // Subscribe to realtime chapter/story comments & stats
   useEffect(() => {
@@ -1015,7 +1081,11 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         data-reader-theme={themeKey}
         data-font-family={fontFamily}
         data-line-height={lineHeight}
-        className={`reader-card w-full p-4 sm:p-8 md:p-12 rounded-3xl border shadow-sm space-y-6 sm:space-y-8 transition-colors duration-300 overflow-hidden ${currentTheme.cardBg} ${currentTheme.cardBorder}`}
+        onContextMenu={triggerCopyProtection}
+        onCopy={triggerCopyProtection}
+        onCut={triggerCopyProtection}
+        onDragStart={triggerCopyProtection}
+        className={`reader-card reader-prose-protected w-full p-4 sm:p-8 md:p-12 rounded-3xl border shadow-sm space-y-6 sm:space-y-8 transition-colors duration-300 overflow-hidden select-none ${currentTheme.cardBg} ${currentTheme.cardBorder}`}
       >
         {/* Chapter Header */}
         <div className={`text-center space-y-2.5 pb-5 border-b ${currentTheme.dividerColor}`}>
@@ -1156,7 +1226,11 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
             data-reader-theme={themeKey}
             data-font-family={fontFamily}
             data-line-height={lineHeight}
-            className={`reader-prose space-y-5 sm:space-y-6 select-text transition-all duration-200 break-words ${
+            onContextMenu={triggerCopyProtection}
+            onCopy={triggerCopyProtection}
+            onCut={triggerCopyProtection}
+            onDragStart={triggerCopyProtection}
+            className={`reader-prose reader-prose-protected space-y-5 sm:space-y-6 select-none transition-all duration-200 break-words ${
               fontFamily === 'serif' ? 'reader-font-serif font-serif' : 'reader-font-sans font-sans'
             } ${lineHeight === 'loose' ? 'reader-line-loose leading-loose sm:leading-[2.2]' : 'reader-line-relaxed leading-relaxed sm:leading-[1.8]'} ${
               themeKey === 'dark' ? 'text-[#e4e4e7]' : currentTheme.textColor
@@ -2071,6 +2145,28 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         >
           <ArrowUp className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
+      )}
+
+      {/* Floating anti-copy / right-click protection notification */}
+      {copyWarning && (
+        <div
+          role="alert"
+          aria-live="polite"
+          className="fixed bottom-6 sm:bottom-8 left-1/2 -translate-x-1/2 z-50 px-4 py-3 rounded-2xl bg-stone-900/95 dark:bg-stone-950/95 text-stone-100 text-xs sm:text-sm font-medium shadow-2xl border border-pink-500/50 flex items-center gap-3 max-w-[92vw] sm:max-w-md animate-dropdown-in backdrop-blur-md"
+        >
+          <div className="p-1.5 rounded-xl bg-pink-500/20 text-pink-400 shrink-0">
+            <ShieldAlert className="w-4 h-4" />
+          </div>
+          <span className="flex-1 leading-snug">{copyWarning}</span>
+          <button
+            type="button"
+            onClick={() => setCopyWarning(null)}
+            className="p-1 text-stone-400 hover:text-stone-200 cursor-pointer transition-colors"
+            title="Đóng thông báo"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
       )}
     </article>
   );
