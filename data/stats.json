@@ -1,10 +1,7 @@
 {
-  "global": {
-    "totalVisits": 36,
-    "totalLikes": 3,
-    "totalFollowers": 2,
-    "totalComments": 8
-  },
-  "stories": {},
-  "updatedAt": "2026-09-21T14:54:41.834Z"
+  "totalVisits": 31,
+  "activeReaders": 1,
+  "totalFollowers": 2,
+  "totalComments": 3,
+  "totalLikes": 3
 }
