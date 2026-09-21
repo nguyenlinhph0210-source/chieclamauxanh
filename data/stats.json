@@ -1,7 +1,10 @@
 {
-  "totalVisits": 31,
-  "activeReaders": 1,
-  "totalFollowers": 2,
-  "totalComments": 3,
-  "totalLikes": 3
+  "global": {
+    "totalVisits": 35,
+    "totalLikes": 3,
+    "totalFollowers": 2,
+    "totalComments": 8
+  },
+  "stories": {},
+  "updatedAt": "2026-09-21T11:41:45.865Z"
 }
