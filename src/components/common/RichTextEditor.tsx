@@ -317,14 +317,14 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           </div>
         )}
 
-        {/* Unified Editor Card: Toolbar anchored at top with NO gap above it */}
+        {/* Unified Editor Card: Toolbar anchored sticky at top with NO gap above it */}
         <div
-          className={`w-full rounded-2xl border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-900 shadow-xs focus-within:ring-2 focus-within:ring-pink-300 focus-within:border-pink-400 overflow-hidden flex flex-col transition-all ${
+          className={`w-full rounded-2xl border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-900 shadow-xs focus-within:ring-2 focus-within:ring-pink-300 focus-within:border-pink-400 flex flex-col transition-all relative ${
             isFullscreen ? 'flex-1 h-full' : ''
           }`}
         >
-          {/* Integrated Formatting Toolbar - Flush at the top of the editor frame */}
-          <div className="shrink-0 bg-stone-100/95 dark:bg-stone-800/95 border-b border-stone-200 dark:border-stone-700 px-2 sm:px-2.5 py-1.5 flex flex-wrap items-center justify-between gap-1 text-xs select-none">
+          {/* Integrated Formatting Toolbar - Sticky at the very top (0 gap) during scrolling */}
+          <div className="sticky top-0 z-20 shrink-0 bg-stone-100/98 dark:bg-stone-800/98 backdrop-blur-sm border-b border-stone-200 dark:border-stone-700 px-2 sm:px-2.5 py-1.5 flex flex-wrap items-center justify-between gap-1 text-xs select-none rounded-t-2xl shadow-xs">
             {/* Main Formatting Action Buttons */}
             <div className="flex flex-wrap items-center gap-0.5 sm:gap-1">
               {/* Inline Styles */}
@@ -492,7 +492,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
           {/* Editor Content Area - Attached directly to toolbar with NO gap */}
           <div
-            className={`w-full relative flex-1 flex flex-col ${
+            className={`w-full relative flex-1 flex flex-col rounded-b-2xl overflow-hidden ${
               isFullscreen ? 'h-full overflow-hidden' : ''
             }`}
           >
